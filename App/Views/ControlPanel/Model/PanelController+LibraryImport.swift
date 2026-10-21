@@ -44,4 +44,18 @@ extension PanelController {
 
   /// `importCancel`: stops the running import, which then reports what it had done.
   func cancelImport() { imports.cancel() }
+
+  /// `importWallper`: imports video wallpapers from Wallper's library
+  /// (`~/Library/Application Support/Wallper/Videos`) into WallpaperMachine.
+  /// Each video is wrapped in a project manifest the same way a standalone
+  /// video chosen through the import picker is. The originals are never moved.
+  func beginWallperImport(duplicates: WallpaperImportService.DuplicatePolicy = .skip) async throws {
+    try await run(.queued) {
+      guard !imports.isBusy, !importPicker.isPresenting else {
+        throw WallpaperActionError(message: L("An import is already running."))
+      }
+      guard !isStopped else { return }
+      try imports.startWallper(duplicates: duplicates)
+    }
+  }
 }

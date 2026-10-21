@@ -7408,6 +7408,13 @@
     "NSAudioCaptureUsageDescription" : {
       "localizations" : {"ko" : {"stringUnit" : {"state" : "translated", "value" : "WallpaperMachine은 오디오 반응형 배경화면을 활성화할 때만 시스템 오디오를 캡처합니다."}}, "en" : {"stringUnit" : {"state" : "translated", "value" : "WallpaperMachine captures system audio only when you enable audio-reactive wallpapers."}}, "ja" : {"stringUnit" : {"state" : "translated", "value" : "WallpaperMachineは、音声に反応する壁紙を有効にしたときだけシステムオーディオをキャプチャします。"}}, "zh-Hans" : {"stringUnit" : {"state" : "translated", "value" : "WallpaperMachine 仅在你启用音频响应壁纸时捕获系统音频。"}}, "zh-Hant" : {"stringUnit" : {"state" : "translated", "value" : "WallpaperMachine 只會在你啟用音訊反應桌布時擷取系統音訊。"}}}
     }
+,
+    "Import from Wallper" : {
+      "localizations" : {"ko" : {"stringUnit" : {"state" : "translated", "value" : "Wallper에서 가져오기"}}, "ja" : {"stringUnit" : {"state" : "translated", "value" : "Wallperからインポート"}}, "zh-Hans" : {"stringUnit" : {"state" : "translated", "value" : "从 Wallper 导入"}}, "zh-Hant" : {"stringUnit" : {"state" : "translated", "value" : "從 Wallper 匯入"}}}
+    },
+    "Import video wallpapers from Wallper's library." : {
+      "localizations" : {"ko" : {"stringUnit" : {"state" : "translated", "value" : "Wallper의 보관함에서 비디오 배경화면을 가져옵니다."}}, "ja" : {"stringUnit" : {"state" : "translated", "value" : "Wallperのライブラリからビデオ壁紙をインポートします。"}}, "zh-Hans" : {"stringUnit" : {"state" : "translated", "value" : "从 Wallper 的资源库导入视频壁纸。"}}, "zh-Hant" : {"stringUnit" : {"state" : "translated", "value" : "從 Wallper 的資源庫匯入視頻桌布。"}}}
+    }
   },
   "version" : "1.0"
 }

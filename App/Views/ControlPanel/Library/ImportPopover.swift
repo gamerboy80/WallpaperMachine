@@ -74,6 +74,17 @@ struct ImportPopover: View {
         }
       }
 
+      HStack(spacing: 8) {
+        Button {
+          model.chooseWallperImport()
+        } label: {
+          Label("Import from Wallper", systemImage: "arrow.down.circle")
+        }
+        .buttonStyle(.panelCapsule)
+        .disabled(state.isBusy || controller.isBusy(PanelActionCoordinator.key("import")))
+        .help(L("Import video wallpapers from Wallper's library."))
+      }
+
       // The store's line is shown whenever it says something: how far the import has got while it
       // runs, and afterwards how it ended ("Import cancelled", "Import could not finish"), above
       // the counts and the reasons of the report.

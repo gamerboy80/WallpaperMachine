@@ -706,6 +706,13 @@ popover, or the window,
 never cancels work: `LibraryImportStore` runs the import for the app, not for the
 page. Quitting cancels and awaits an active local import.
 
+The **Import from Wallper** button imports every video in
+`~/Library/Application Support/Wallper/Videos` at once, wrapping each in a
+`project.json` the way a standalone video chosen through the picker is. It uses
+the same duplicate policy and the same `WallpaperImportService` rules, and it
+leaves the originals untouched. It is available only when Wallper's library
+folder exists; if it does not, the button does nothing.
+
 An import takes Wallpaper Engine project folders, a Steam library, a Wallpaper
 Engine folder, a project's own files, videos (`mp4`, `m4v`, `mov`, `webm`, `mkv`,
 `avi`), HTML files and pictures (`jpg`, `jpeg`, `png`, `gif`, `webp`, `heic`,

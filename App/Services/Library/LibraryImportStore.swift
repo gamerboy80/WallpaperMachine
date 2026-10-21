@@ -46,6 +46,21 @@ final class LibraryImportStore {
         task = Task { [weak self] in await self?.run(sources, duplicates: duplicates) }
     }
 
+    /// Starts importing videos from Wallper's library. Throws when an import is
+    /// already running; an empty discovery starts nothing.
+    func startWallper(duplicates: WallpaperImportService.DuplicatePolicy) throws {
+        guard task == nil else {
+            throw WallpaperActionError(message: String(localized: "An import is already running."))
+        }
+        let videos = WallperVideoImporter.discoverVideos()
+        guard !videos.isEmpty else { return }
+        isBusy = true
+        failure = nil
+        report = nil
+        status = String(localized: "Preparing import…")
+        task = Task { [weak self] in await self?.run(videos, duplicates: duplicates) }
+    }
+
     func cancel() {
         guard let task else { return }
         task.cancel()

@@ -606,4 +606,13 @@ final class InstalledBrowserModel {
       try await controller.beginImport(duplicates: duplicates)
     }
   }
+
+  /// Imports video wallpapers from Wallper's library without a file picker.
+  @discardableResult
+  func chooseWallperImport() -> Task<Void, Never> {
+    let duplicates = importDuplicates
+    return controller.launch(PanelActionCoordinator.key("import")) { [controller] in
+      try await controller.beginWallperImport(duplicates: duplicates)
+    }
+  }
 }
