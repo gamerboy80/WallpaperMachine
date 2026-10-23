@@ -136,3 +136,9 @@ override rule, 13 cells matched before the fix and all 22 to the 8-bit level aft
   was missed, build the harness from a checkout of the commit before the change.
 - The issue's screenshot and the Workshop preview are not targets, even when the
   report compares against them.
+- Wallpaper Engine changes some rules with `scene.json`'s `version` (the particle
+  colour override tints once from version 5, twice before): give a probe scene the
+  reported scene's `version`, and capture the probe at both sides of a suspected gate.
+- A probe particle emitter with `"directions": "0 0 0"` and a `movement` operator draws
+  nothing at all in Wallpaper Engine, and one such cell blanks the whole probe; use
+  `"1 1 1"` with zero distances to emit from one point.

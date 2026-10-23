@@ -476,6 +476,9 @@ impl OweScene {
             .transpose()?;
 
         let raw = self.raw_ptr()?;
+        // The volume and mute travel with the configuration: the scene can load as soon as
+        // it is configured, and its sounds play from the moment they are mounted, before a
+        // later setting would be read.
         call_status("owe_scene_wallpaper_apply_config", || unsafe {
             sys::owe_scene_wallpaper_apply_config(
                 raw.as_ptr(),
@@ -484,15 +487,15 @@ impl OweScene {
                 cache.as_ref().map_or(std::ptr::null(), |text| text.as_ptr()),
                 desc.fps,
                 desc.paused,
+                f32::from(desc.audio_volume),
+                desc.audio_muted,
                 desc.force_shader_refresh,
                 overrides.as_ref().map_or(std::ptr::null(), |text| text.as_ptr()),
             )
         })?;
 
         self.set_audio_response_enabled(desc.audio_response_enabled)?;
-        self.set_media_integration_enabled(desc.media_integration_enabled)?;
-        self.set_audio_volume(desc.audio_volume)?;
-        self.set_audio_muted(desc.audio_muted)
+        self.set_media_integration_enabled(desc.media_integration_enabled)
     }
 
     /// # Errors

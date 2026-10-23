@@ -37,6 +37,9 @@ struct ParticleParseContext {
     /// Wallpaper Engine fills a key a file leaves out with different numbers
     /// in a pixel scene and in a 3D scene.
     bool                                        ortho { true };
+    /// Whether a re-tinted preset is multiplied by the override colour as well:
+    /// true for scenes saved before version 5 (WPScene::kRetintOnlyVersion).
+    bool                                        tint_after_retint { true };
     /// Audio source and the scene's "needs audio" mark for operators and
     /// initializers that carry `audioprocessing*` keys.
     std::function<audio::AudioSpectrumSnapshot()> spectrum;
@@ -60,7 +63,7 @@ public:
     static ParticleInitOp
         genOverrideInitOp(std::shared_ptr<const wpscene::ParticleInstanceoverride>,
                           ParticleColorDefinition color = {}, bool speed_override = true,
-                          bool size_override = true);
+                          bool size_override = true, bool tint_after_retint = true);
 
     /// Finds the colour a file's initializers and operators produce, for
     /// measuring an instance colour override against.

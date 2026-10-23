@@ -526,9 +526,11 @@ entry's value plus and minus the noise, cut off at 0 and 1), `inheritcontrolpoin
 `mapsequencebetweencontrolpoints` and `inheritinitialvaluefromevent` initializers are
 implemented. A scene object's `instanceoverride` colour re-tints the preset's own colours
 by the difference between the override and the preset's representative colour, keeping
-their spread, and then tints the particle by the override as well (so an orange override
-on a fire whose red end the re-tint turns magenta draws it red again, as Wallpaper Engine
-does); a preset without colours takes the override as its colour, and an override equal
+their spread. In a scene saved before version 5 (`scene.json`'s `version`, missing counts
+as old) it then tints the particle by the override as well (so an orange override on a
+fire whose red end the re-tint turns magenta draws it red again, as Wallpaper Engine
+does); from version 5 the re-tint alone is the colour, so a dark override is not applied
+twice. A preset without colours takes the override as its colour, and an override equal
 to the preset's own colour changes nothing; its
 `controlpoint0`..`7` and `controlpointangle0`..`7` replace the preset's control points
 (a control point flagged 2 is held at its scene position as the layer moves), and

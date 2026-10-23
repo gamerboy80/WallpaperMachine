@@ -212,3 +212,4 @@ bool SoundManager::Muted() const { return pImpl->device->Muted(); }
 void SoundManager::SetMuted(bool v) { pImpl->device->SetMuted(v); }
 void SoundManager::SetVolume(float v) { pImpl->device->SetVolume(v); }
 bool SoundManager::OutputStarted() const { return pImpl->device->IsStarted(); }
+uint64_t SoundManager::OutputStarts() const { return pImpl->device->Starts(); }

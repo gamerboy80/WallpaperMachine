@@ -1727,7 +1727,10 @@ texture entrances are not decoded-image or native-rendering evidence.
   equal to the preset's colour, a `colorchange` end re-tinted past red tinted back to red
   (issue #67), brightness only in HDR). `ParticleOverrideTint.*`
   (`particle_override_tint_test`): after the re-tint a colour-bearing preset's newborn is
-  multiplied by the override and remembers that product, the colourless preset gets the
+  multiplied by the override and remembers that product (a scene of version 5 or later
+  keeps the re-tint alone: `InstanceOverride.FromSceneVersionFiveARetintedPresetIsNotTintedByTheOverrideAgain`
+  in `particle_parity_test`, read off Wallpaper Engine probe scenes at versions 1 to 6),
+  the colourless preset gets the
   override unsquared, an override equal to the preset's representative colour leaves the
   default colour exactly, and a `colorchange` ramp is tinted at both ends. `SequenceInitializers.*`:
   `mapsequencearound`/`between`, `inheritcontrolpointvelocity`, `positionoffsetrandom`,

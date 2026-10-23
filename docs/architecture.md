@@ -384,6 +384,10 @@ per-Space getter and setter through optional private CoreGraphics and HIServices
   suppressed separately (`setAudioSuppressed`) for a mute rule, other-app audio set to mute or the
   user's own mute of every wallpaper (`PlaybackPreferences.wallpapersMuted`). The bridge ORs that one
   flag with each wallpaper's saved mute, so the user's mute never rewrites a saved sound setting.
+  A scene renderer receives its pause, volume and mute inside its configuration
+  (`owe_scene_wallpaper_apply_config`), not as settings sent after it: the scene can load the
+  moment it is configured, and its sounds play once mounted, so a later mute would let the start of
+  a muted wallpaper's music through on a switch.
   A third channel, beside presentation and audio, carries the conditions that chose Reduced quality
   (`SystemConditionMonitor.qualityReductions`) to the bridge as `setQualityThrottle`: wallpapers keep
   presenting under the reduced-quality profile's frame-rate ceiling and render scale for as long as

@@ -151,13 +151,12 @@ final class WallpaperSurface: LockScreenSurfaceLifecycle {
         renderer, Unmanaged.passUnretained(metal).toOpaque(), UInt32(metal.drawableSize.width),
         UInt32(metal.drawableSize.height), 0, 0, Double(scale)))
     // The lock-screen process never plays sound, reads input, or receives media data.
-    try check(owe_scene_wallpaper_set_audio_muted(renderer, true))
     try check(
       owe_scene_wallpaper_set_property_bool(
         renderer, owe_property_audio_response_enabled(), false))
     try check(
       owe_scene_wallpaper_apply_config(
-        renderer, project.path, assets.path, cache.path, scene.fps, false, false,
+        renderer, project.path, assets.path, cache.path, scene.fps, false, 1, true, false,
         scene.propertiesJSON))
     try check(
       owe_scene_wallpaper_set_property_bool(

@@ -68,6 +68,8 @@ public:
     // paused or muted, so stopping the device instead is output-identical.
     bool IsInited() const { return m_device.state.value != ma_device_state_uninitialized; }
     bool IsStarted() const { return ma_device_is_started(&m_device); }
+    // How many times output has started; a start that failed is not counted.
+    uint64_t Starts() const { return m_starts.load(std::memory_order_relaxed); }
     void Start() {
         std::lock_guard<std::mutex> control { m_control_mutex };
         m_running.store(true, std::memory_order_relaxed);
@@ -152,6 +154,8 @@ private:
         if (want && ! started) {
             if (ma_device_start(&m_device) != MA_SUCCESS) {
                 LOG_ERROR("can't start sound device");
+            } else {
+                m_starts.fetch_add(1, std::memory_order_relaxed);
             }
         } else if (! want && started) {
             if (ma_device_stop(&m_device) != MA_SUCCESS) {
@@ -221,6 +225,7 @@ private:
     std::mutex        m_mutex;     // for operating channel vector
     std::mutex        m_control_mutex; // serializes control-thread state changes
     std::atomic<bool> m_running { false };
+    std::atomic<uint64_t> m_starts { 0 };
 
     std::atomic<float> m_volume { 1.0f };
     std::atomic<bool>  m_muted { false };

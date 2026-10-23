@@ -902,6 +902,7 @@
 		F2116117DBBE1A6E056E4A52 /* SettingsNote.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2687B6B2A795A5EA40201169 /* SettingsNote.swift */; };
 		F2421409F3040349972899B6 /* PanelLibraryImportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84DB2069B8A634C458929953 /* PanelLibraryImportTests.swift */; };
 		F27569AB05B158B5C2BB4361 /* InstalledFooter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B71F4B7AA59D452A3B46105 /* InstalledFooter.swift */; };
+		F2A7B3631782EE0B9907DB0E /* NativeVideoLoopRangeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 659678786D1FEE05A6C785DC /* NativeVideoLoopRangeTests.swift */; };
 		F2BF4D35987C693AFFCC02E4 /* PropertyTopLine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59ED91AD7FC5D3EE80F9C933 /* PropertyTopLine.swift */; };
 		F319EF18E27C7D42AF96E156 /* LockScreenRequestShapeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55EA635BF32D31F2F1B60FF3 /* LockScreenRequestShapeTests.swift */; };
 		F33A2F1578AB78915C15B6A8 /* AutomationCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41E36FEDEF89E7C6F7119E5F /* AutomationCommand.swift */; };
@@ -1415,6 +1416,7 @@
 		64BA9F24E0DAF34643164906 /* MemoryPressureMonitorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryPressureMonitorTests.swift; sourceTree = "<group>"; };
 		650BD2B2ABC5BF33B3E354F5 /* PixivInspector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PixivInspector.swift; sourceTree = "<group>"; };
 		656FFF1AF085F9FAAF2E75A0 /* WallpaperConfigurationIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperConfigurationIntents.swift; sourceTree = "<group>"; };
+		659678786D1FEE05A6C785DC /* NativeVideoLoopRangeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeVideoLoopRangeTests.swift; sourceTree = "<group>"; };
 		6604F944757214EC02F990AC /* PanelController+Letterbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PanelController+Letterbox.swift"; sourceTree = "<group>"; };
 		66658195A0A04B1C9D077996 /* SteamSignInPhaseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SteamSignInPhaseTests.swift; sourceTree = "<group>"; };
 		6669F66223EDF1EEC5086AAC /* MachOImageUUIDsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MachOImageUUIDsTests.swift; sourceTree = "<group>"; };
@@ -2190,6 +2192,7 @@
 				641A0E9E147E7E624DA3219A /* NativeVideoHealthSupervisorTests.swift */,
 				E8D82F809C60A5C8437C168D /* NativeVideoLayoutTests.swift */,
 				B6A8D8076CED302FF281FA1B /* NativeVideoLivenessTests.swift */,
+				659678786D1FEE05A6C785DC /* NativeVideoLoopRangeTests.swift */,
 				3AA6B2B21F8AAEE83C660623 /* NativeVideoPlaybackFailureTests.swift */,
 				85CF926E535B5A0D390F8F3D /* NativeVideoPlayerMediaTests.swift */,
 				A3DFD092A26BC641D7EE33F0 /* NativeVideoPosterOrientationTests.swift */,
@@ -3975,6 +3978,7 @@
 				3578F2C0A044AD5DCBE9C734 /* NativeVideoHealthSupervisorTests.swift in Sources */,
 				CD0B2C28C0CC139710DE8A7B /* NativeVideoLayoutTests.swift in Sources */,
 				53D1F244030A7AEA100B5C39 /* NativeVideoLivenessTests.swift in Sources */,
+				F2A7B3631782EE0B9907DB0E /* NativeVideoLoopRangeTests.swift in Sources */,
 				5BC904B626BEB96BFDBD870E /* NativeVideoPlaybackFailureTests.swift in Sources */,
 				2AD4B0317BC7A99CFBEDCF78 /* NativeVideoPlayerMediaTests.swift in Sources */,
 				2AA7BD5E6624D26D01DFCDFD /* NativeVideoPosterOrientationTests.swift in Sources */,

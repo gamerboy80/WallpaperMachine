@@ -622,6 +622,15 @@ device.
   the file, volume is clamped and mute keeps consuming it, and one-shot, loop and
   zero-delay random layers each end or restart when their file runs out. All sound
   fixtures use the null backend.
+- **A muted wallpaper is silent while it loads** — `scene_load_sound_test` (GPU-gated)
+  loads a scene with a looping sound through `SceneWallpaper`, with the surface taken
+  first so the configuration loads it at once, and counts how often its output started
+  (null backend): once for an unmuted wallpaper, never for one configured muted or
+  paused (a paused one still reports its first frame), once when the muted one is
+  unmuted later. The trap: a mute sent after the configuration
+  arrives behind the load, so a wallpaper switch played the start of a muted
+  wallpaper's music. Pause, volume and mute travel in `owe_scene_wallpaper_apply_config`,
+  and a reopened renderer takes them from the scene's live state, not its descriptor.
 - **Output device rebuild** — `wallpaper-core` `media::audio::device_watch::tests`
   (a burst of changes is one report after the quiet period, a change wakes an idle
   watcher, `cancel` drops a pending report without waiting it out, every subscriber

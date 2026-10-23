@@ -453,6 +453,33 @@ final class NativeVideoPlayerMediaTests: XCTestCase {
         print("[media] audio cannot start -> \(dropped ?? "none")")
     }
 
+    func testEveryLoopPassStopsAtTheEndOfThePicture() async throws {
+        // Issue 76: an unbounded looper waited for the audio at every seam and
+        // held the last frame meanwhile. Paused, with the audio sent to an
+        // output that does not exist, so nothing plays or opens a device.
+        var request = SyntheticVideoFixture.Request.constantRate(
+            name: "loop-ends-with-picture", numerator: 30, denominator: 1, frames: 30)
+        request.withAudio = true
+        request.audioSeconds = 1.5
+        let url = try await SyntheticVideoFixture.write(request, into: directory)
+
+        let player = NativeVideoPlayer(surface: surface, counters: counters, paused: true)
+        player.setAudioOutputDeviceForTest("org.wallpapermachine.tests.missing-output")
+        let view = NSView(frame: NSRect(x: 0, y: 0, width: 64, height: 36))
+        view.wantsLayer = true
+        player.attach(to: view)
+        player.load(url: url)
+        self.player = player
+
+        let queued = await wait { player.queuedItemCount > 0 }
+        XCTAssertTrue(queued, "the looper never queued a copy of the clip")
+        let ends = player.queuedItemEndTimesForTest
+        XCTAssertFalse(ends.isEmpty)
+        for end in ends {
+            XCTAssertEqual(end, CMTime(value: 1, timescale: 1), "a pass must end with the picture")
+        }
+    }
+
     /// A 64x36 clip, or its quarter-turned twin, playing in a 40x40 point view
     /// whose picture size the item has reported.
     private func sizedPlayer(

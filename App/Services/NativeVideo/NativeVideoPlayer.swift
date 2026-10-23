@@ -56,9 +56,9 @@ final class NativeVideoPlayer {
     /// replaced by a video-only one. One attempt only: a failure of the
     /// video-only item is about the picture and goes to the host.
     private var audioDropped = false
-    /// The one in-flight rebuild of the item, whether it is the silent
-    /// fallback above or a restart the host asked for. A second repair never
-    /// starts while one is pending.
+    /// The one in-flight rebuild of the item, whether it is the first load,
+    /// the silent fallback above or a restart the host asked for. A second
+    /// repair never starts while one is pending.
     private var rebuild: Task<Void, Never>?
     /// How many times this surface may rebuild its pipeline before the host
     /// has to give the wallpaper up. Owned here, one per surface, so it
@@ -213,7 +213,31 @@ final class NativeVideoPlayer {
         mediaURL = url
         let item = AVPlayerItem(url: url)
         readDisplayTransform(of: item.asset)
-        start(item)
+        // Held as the pending rebuild so a repair cannot start an item of its
+        // own before this one is playing, and `stop()` cancels it.
+        rebuild = Task { @MainActor [weak self] in
+            let range = await Self.loopRange(of: item.asset)
+            guard let self, !self.stopped, !Task.isCancelled else { return }
+            self.rebuild = nil
+            self.start(item, looping: range)
+        }
+    }
+
+    /// The stretch of the file one pass of the loop plays: the video track's
+    /// own time range, or `.invalid` (the whole item) when it cannot be read.
+    ///
+    /// An unbounded looper ends each pass at the end of the item, which a clip
+    /// with sound reaches only once its audio has drained. Even muted, and
+    /// even when both tracks report the same duration, that held a 4K clip's
+    /// last frame for about a quarter of a second at every seam (issue 76);
+    /// bounded by the picture, the seam is as smooth as any other frame.
+    nonisolated static func loopRange(of asset: AVAsset) async -> CMTimeRange {
+        guard let video = try? await asset.loadTracks(withMediaType: .video).first,
+            let range = try? await video.load(.timeRange),
+            range.isValid, range.start.isNumeric, range.duration.isNumeric,
+            range.duration > .zero
+        else { return .invalid }
+        return range
     }
 
     /// Reads the display matrix from the asset the player itself is loading,
@@ -257,10 +281,10 @@ final class NativeVideoPlayer {
         !transform.isIdentity
     }
 
-    private func start(_ item: AVPlayerItem) {
+    private func start(_ item: AVPlayerItem, looping range: CMTimeRange) {
         // AVPlayerLooper takes ownership of the queue, so it is created once
         // per item and replaced wholesale rather than mutated.
-        let looper = AVPlayerLooper(player: player, templateItem: item)
+        let looper = AVPlayerLooper(player: player, templateItem: item, timeRange: range)
         self.looper = looper
         counters.record(.nativeVideoItemCreated, for: surface)
         observeFailures(looper: looper)
@@ -385,6 +409,8 @@ final class NativeVideoPlayer {
         audioDropped = true
         rebuild = Task { @MainActor [weak self] in
             let silent = await Self.videoOnlyItem(url: mediaURL)
+            var range = CMTimeRange.invalid
+            if let silent { range = await Self.loopRange(of: silent.asset) }
             guard let self, !self.stopped else { return }
             self.rebuild = nil
             guard let silent else {
@@ -393,7 +419,7 @@ final class NativeVideoPlayer {
             }
             self.releaseItem()
             self.onAudioDropped?(detail)
-            self.start(silent)
+            self.start(silent, looping: range)
         }
     }
 
@@ -458,6 +484,8 @@ final class NativeVideoPlayer {
             } else {
                 item = AVPlayerItem(url: mediaURL)
             }
+            var range = CMTimeRange.invalid
+            if let item { range = await Self.loopRange(of: item.asset) }
             guard let self, !self.stopped, !Task.isCancelled else { return }
             self.rebuild = nil
             guard let item else {
@@ -465,7 +493,7 @@ final class NativeVideoPlayer {
                 return
             }
             self.releaseItem(cancellingCheck: !keepingCheck)
-            self.start(item)
+            self.start(item, looping: range)
         }
         return true
     }
@@ -582,6 +610,9 @@ final class NativeVideoPlayer {
     /// `AVPlayerLooper` keeps more than one copy of the template item queued to
     /// make the seam gapless, so this is deliberately not claimed to be one.
     var queuedItemCount: Int { player.items().count }
+    /// Where each queued copy stops playing, which the looper sets from the
+    /// range it was given.
+    var queuedItemEndTimesForTest: [CMTime] { player.items().map(\.forwardPlaybackEndTime) }
 
     /// The item the player is actually playing. Exposed because the loop
     /// replaces it: a poster taken from the looper's template would be a

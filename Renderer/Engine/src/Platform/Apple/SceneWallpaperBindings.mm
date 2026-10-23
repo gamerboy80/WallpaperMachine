@@ -661,6 +661,8 @@ extern "C" int owe_scene_wallpaper_apply_config(
     const char* cache_path,
     uint32_t fps,
     bool paused,
+    float volume,
+    bool muted,
     bool force_shader_refresh,
     const char* project_property_override_json)
 {
@@ -668,6 +670,9 @@ extern "C" int owe_scene_wallpaper_apply_config(
     if (scene == nullptr) return fail("the scene host handle is NULL");
     if (source == nullptr || *source == '\0') return fail("the wallpaper source is NULL or empty");
     if (fps == 0) return fail("the frame rate must not be zero");
+    if (! std::isfinite(volume) || volume < 0.0f || volume > 1.0f) {
+        return fail("the audio volume must be between 0 and 1");
+    }
     return guarded([&] {
         wallpaper::SceneWallpaperConfig config;
         config.source     = source;
@@ -675,6 +680,8 @@ extern "C" int owe_scene_wallpaper_apply_config(
         config.cache_path = cache_path != nullptr ? cache_path : "";
         config.fps        = std::min<uint32_t>(fps, 65535);
         config.paused     = paused;
+        config.volume     = volume;
+        config.muted      = muted;
         config.force_shader_refresh          = force_shader_refresh;
         config.has_project_property_override = project_property_override_json != nullptr;
         if (project_property_override_json != nullptr) {

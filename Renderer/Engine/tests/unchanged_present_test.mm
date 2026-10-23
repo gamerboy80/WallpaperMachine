@@ -916,10 +916,6 @@ TEST_F(UnchangedPresent, LocalProjectEnergyIsMeasuredHeadlessly)
 
     SceneWallpaper wallpaper;
     ASSERT_TRUE(wallpaper.init());
-    // A measurement makes no sound, whatever the scene mounts: muted before the
-    // scene exists, so no output device is ever started for it.
-    wallpaper.setPropertyBool(PROPERTY_MUTED, true);
-    wallpaper.setPropertyFloat(PROPERTY_VOLUME, 0.0f);
     wallpaper.setPropertyObject(PROPERTY_FIRST_FRAME_CALLBACK,
                                 std::make_shared<FirstFrameCallback>([&] {
                                     std::scoped_lock lock(mutex);
@@ -944,6 +940,10 @@ TEST_F(UnchangedPresent, LocalProjectEnergyIsMeasuredHeadlessly)
     config.cache_path = cache.string();
     config.fps        = 60;
     config.paused     = false;
+    // A measurement makes no sound, whatever the scene mounts: muted in its
+    // configuration, so no output device is ever started for it.
+    config.volume     = 0.0f;
+    config.muted      = true;
     wallpaper.applyConfig(config);
     {
         std::unique_lock lock(mutex);

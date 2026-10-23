@@ -857,11 +857,11 @@ ParticleInitOp WPParticleParser::genParticleInitOp(const nlohmann::json&        
 
 ParticleInitOp WPParticleParser::genOverrideInitOp(
     std::shared_ptr<const wpscene::ParticleInstanceoverride> over, ParticleColorDefinition def,
-    bool speed_override, bool size_override) {
+    bool speed_override, bool size_override, bool tint_after_retint) {
     LastFinite lifetime, alpha, size, speed, brightness;
     const OverrideTint tint(over, def);
-    return [over = std::move(over), tint, speed_override, size_override, lifetime, alpha, size, speed,
-            brightness](Particle& p, double) mutable {
+    return [over = std::move(over), tint, speed_override, size_override, tint_after_retint, lifetime, alpha,
+            size, speed, brightness](Particle& p, double) mutable {
         if (! over || ! over->enabled) return;
         // The record is read now, so a property that moved it shows in the next birth.
         const double life = lifetime(over->lifetime);
@@ -872,9 +872,10 @@ ParticleInitOp WPParticleParser::genOverrideInitOp(
         if (speed_override) PM::MutiplyVelocity(p, speed(over->speed));
         if (const auto flat = tint.FlatTint()) PM::InitColor(p, flat->x(), flat->y(), flat->z());
         // A file with colours had them re-tinted by its initializers and operators;
-        // the newborn is then multiplied by the override itself, once. Nothing
-        // moved (override equal to the file's colour) means no multiply either.
-        else if (const auto moved = tint.Shifted())
+        // in a scene saved before version 5 the newborn is then multiplied by the
+        // override itself, once. Nothing moved (override equal to the file's
+        // colour) means no multiply either.
+        else if (const auto moved = tint.Shifted(); moved && tint_after_retint)
             PM::MutiplyInitColor(p, moved->target.x(), moved->target.y(), moved->target.z());
         const double glow = brightness(over->brightness);
         if (over->hdr && glow != 1.0) PM::MutiplyInitColor(p, glow, glow, glow);

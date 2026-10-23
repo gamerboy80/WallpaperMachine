@@ -748,6 +748,12 @@ than a target, and changing a target does not reopen a running clip: its identit
 file. The inspector hides **Frame rate** on a display a plain video plays on, because the
 field would do nothing there.
 
+The loop is bounded by the picture: `AVPlayerLooper` is given the video track's own time
+range (`NativeVideoPlayer.loopRange`, also used by the preview window), so each pass ends
+with the last frame. Left unbounded, a pass ends where the item ends, which for a clip
+with sound is only once its audio has drained: even muted, and with both tracks the same
+length, a 4K clip held its last frame for about a quarter of a second at every seam.
+
 Playback honours the wallpaper's scaling mode and scale factor by the renderer's own
 layout rule, so a clip sits where the scene engine used to put it: **Fill**,
 **Fit** and **Stretch** scale it to the display, **Fit with blurred backdrop** places

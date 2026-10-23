@@ -55,6 +55,9 @@ public:
     void Pause();
     // True while the output device is started (IO running).
     bool OutputStarted() const;
+    // How many times the output device has started, so a start that was stopped again
+    // before anyone looked still shows.
+    uint64_t OutputStarts() const;
 
     float Volume() const;
     bool  Muted() const;

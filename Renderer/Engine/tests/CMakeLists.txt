@@ -751,6 +751,24 @@ if(APPLE)
     gtest_discover_tests(scene_failure_policy_test PROPERTIES TIMEOUT 120 DISCOVERY_TIMEOUT 60)
 endif()
 
+# A scene's sound while it loads: the volume and mute a wallpaper is meant to
+# have are in force before its sounds are mounted. The output is miniaudio's
+# null backend, so no audio device is opened.
+if(APPLE)
+    add_executable(scene_load_sound_test scene_load_sound_test.mm)
+    target_link_libraries(scene_load_sound_test PRIVATE ${PROJECT_NAME}
+        wpScene wpRenderCommon wpRGraph GTest::gtest_main)
+    target_include_directories(scene_load_sound_test PRIVATE
+        . ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/src/Scene/include
+        ${CMAKE_SOURCE_DIR}/src/Scene/RenderCommon/include)
+    target_compile_features(scene_load_sound_test PRIVATE cxx_std_20)
+    set_target_properties(scene_load_sound_test PROPERTIES
+        OBJCXX_STANDARD 20 OBJCXX_STANDARD_REQUIRED YES)
+    target_compile_options(scene_load_sound_test PRIVATE
+        $<$<COMPILE_LANGUAGE:OBJCXX>:-fobjc-arc>)
+    gtest_discover_tests(scene_load_sound_test PROPERTIES TIMEOUT 120 DISCOVERY_TIMEOUT 60)
+endif()
+
 # Render-target sizing only: no device, no surface, no GPU.
 add_executable(render_scale_test render_scale_test.cpp)
 target_link_libraries(render_scale_test PRIVATE ${PROJECT_NAME} wpScene wpRenderCommon wpRGraph nlohmann_json::nlohmann_json GTest::gtest_main)

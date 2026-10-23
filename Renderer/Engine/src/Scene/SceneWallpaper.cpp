@@ -298,6 +298,9 @@ private:
     MHANDLER_CMD(RENDER_FAILED);
 
 private:
+#ifdef WESCENE_BUILD_TESTS
+    friend struct SceneWallpaperInputTestAccess;
+#endif
     std::atomic<bool> m_inited { false };
 
     /// Guards `m_accepting` and `m_tickets`: whether commands that block may still be posted, and
@@ -1790,6 +1793,22 @@ void SceneWallpaperInputTestAccess::InjectFrameFailure(SceneWallpaper& wallpaper
         ->post();
 }
 
+void SceneWallpaperInputTestAccess::UseNullSoundOutput(SceneWallpaper& wallpaper) {
+    auto& handler           = *wallpaper.m_main_handler;
+    handler.m_sound_manager = std::make_unique<audio::SoundManager>(
+        audio::SoundManager::OutputBackend::Null);
+    // Running, as the one it replaces was made.
+    handler.m_sound_manager->Play();
+}
+
+uint64_t SceneWallpaperInputTestAccess::SoundOutputStarts(SceneWallpaper& wallpaper) {
+    return wallpaper.m_main_handler->m_sound_manager->OutputStarts();
+}
+
+bool SceneWallpaperInputTestAccess::SurfaceHandedOver(SceneWallpaper& wallpaper) {
+    return wallpaper.m_main_handler->renderHandler()->renderSurfaceReady();
+}
+
 #endif
 
 void SceneWallpaper::initSurface(const RenderInitInfo& info) {
@@ -2170,7 +2189,10 @@ bool MainHandler::applyConfig(SceneWallpaperConfig config) {
     // Replaced by every configuration: the flag acts only on the call after which it was set.
     m_force_refresh = config.force_shader_refresh;
     m_render_handler->frame_timer.SetRequiredFps(static_cast<u16>(std::min<uint32_t>(config.fps, 65535)));
-    // A wallpaper that arrives paused must not make a sound while it loads.
+    // A wallpaper that arrives paused or muted must not make a sound while it loads, nor
+    // one that arrives quieter play louder.
+    m_sound_manager->SetVolume(config.volume);
+    m_sound_manager->SetMuted(config.muted);
     setPaused(config.paused);
     return reload;
 }

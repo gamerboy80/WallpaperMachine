@@ -387,6 +387,9 @@ struct ParseContext {
     // The canvas has a pixel size: particle files then default omitted keys in
     // pixel units.
     bool                       pixel_canvas { true };
+    // The scene predates version 5: a re-tinted particle preset is multiplied
+    // by its instance colour override as well.
+    bool                       tint_after_retint { true };
 };
 
 namespace
@@ -663,8 +666,9 @@ void AddParticleIndexArray(SceneMesh& mesh, uint32_t count) {
 ParticleParseContext MakeParticleParseContext(
     ParticleSubSystem& pSys, const wpscene::Particle& wp,
     const std::shared_ptr<const wpscene::ParticleInstanceoverride>& over, Scene* scene,
-    bool pixel_canvas) {
+    bool pixel_canvas, bool tint_after_retint) {
     ParticleParseContext ctx;
+    ctx.tint_after_retint = tint_after_retint;
     ctx.over  = over;
     ctx.spawn = pSys.SpawnContext();
     ctx.color = WPParticleParser::analyzeColorSources(wp.initializers, wp.operators);
@@ -4824,13 +4828,14 @@ std::unique_ptr<ParticleSubSystem> CommitParticleSystem(
                                                              sub->SpawnContext()));
     }
     const auto parse_context =
-        MakeParticleParseContext(*sub, file, over, &scene, context.pixel_canvas);
+        MakeParticleParseContext(*sub, file, over, &scene, context.pixel_canvas, context.tint_after_retint);
     for (const auto& initializer : file.initializers) {
         if (initializer.is_object()) sub->AddInitializer(WPParticleParser::genParticleInitOp(initializer, parse_context));
     }
     sub->AddInitializer(WPParticleParser::genOverrideInitOp(over, parse_context.color,
                                                             parse_context.speed_override,
-                                                            parse_context.size_override));
+                                                            parse_context.size_override,
+                                                            parse_context.tint_after_retint));
     for (const auto& op : file.operators) {
         if (! op.is_object()) continue;
         sub->AddOperator(WPParticleParser::genParticleOperatorOp(op, parse_context));
@@ -5902,6 +5907,7 @@ std::shared_ptr<Scene> ParseSceneDocument(const SceneParseRequest& request, cons
     context.shader_updater = static_cast<WPShaderValueUpdater*>(scene->shaderValueUpdater.get());
     context.is_ortho       = general.isOrtho;
     context.pixel_canvas   = general.pixelCanvas;
+    context.tint_after_retint = wp.version < wpscene::WPScene::kRetintOnlyVersion;
 
     const LayerObjectIndex index = BuildLayerObjectIndex(objects);
     g_parse_layer_index          = &index;

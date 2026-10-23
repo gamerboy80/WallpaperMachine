@@ -462,7 +462,9 @@ struct OpenedRenderer {
 impl OpenedRenderer {
     /// Opens a renderer on `layer` and brings it to the state the scene has:
     /// the descriptor's values are applied by the open, then only what the
-    /// state does differently, then the render scale in force.
+    /// state does differently, then the render scale in force. Pause, volume
+    /// and mute are the state's from the open on: the scene's sounds play as
+    /// soon as it loads, before a correction sent after the open is read.
     #[allow(clippy::too_many_arguments)]
     fn open(
         backend: OweBackend,
@@ -474,6 +476,11 @@ impl OpenedRenderer {
         layer: *mut std::ffi::c_void,
         actor: &WeakActorRef<EngineActor>,
     ) -> Result<Self, EngineError> {
+        let mut desc = desc.clone();
+        desc.paused = state.paused;
+        desc.audio_volume = state.audio_volume;
+        desc.audio_muted = state.audio_muted;
+        let desc = &desc;
         let (pointer_relay, on_pointer_input) = PointerInputRelay::new(actor.clone(), handle)?;
         let (shortcut_relay, on_user_shortcut) = UserShortcutRelay::new(actor.clone(), handle)?;
         let (audio_relay, on_audio_requirement) =

@@ -1159,7 +1159,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         }
         if whatsNew, let whatsNewWindow {
             NSApp.setActivationPolicy(.regular)
-            whatsNewWindow.makeKeyAndOrderFront(nil)
+            ControlPanelWindow.bringForward(whatsNewWindow)
         }
         rebuildMenu()
     }
@@ -1918,7 +1918,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
             ControlPanelWindow.moveToActiveSpace(window)
             whatsNewWindow = window
             NSApp.setActivationPolicy(.regular)
-            window.makeKeyAndOrderFront(nil)
+            ControlPanelWindow.bringForward(window)
             NSApp.activate(ignoringOtherApps: true)
             whatsNewStore.didPresent(announcement)
         } catch {
@@ -1954,7 +1954,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         // After the saved frame is restored, so restoring does not overwrite it.
         window.setFrameAutosaveName(ControlPanelWindow.frameAutosaveName)
         controlPanelWindow = window
-        window.makeKeyAndOrderFront(nil)
+        ControlPanelWindow.bringForward(window)
         NSApp.activate(ignoringOtherApps: true)
     }
 

@@ -68,7 +68,9 @@ int owe_scene_wallpaper_finish_surface_reconfigure(
     uint32_t render_height,
     double display_scale_factor);
 
-/* What to show and how fast. */
+/* What to show and how fast. `paused`, `volume` (0 to 1) and `muted` are in force before
+   the scene loads, which can start at once; the setters below act only from when they are
+   read, after a load that already began has started its sounds. */
 int owe_scene_wallpaper_apply_config(
     owe_scene_wallpaper* scene,
     const char* source,
@@ -76,6 +78,8 @@ int owe_scene_wallpaper_apply_config(
     const char* cache_path,
     uint32_t fps,
     bool paused,
+    float volume,
+    bool muted,
     bool force_shader_refresh,
     const char* project_property_override_json);
 int owe_scene_wallpaper_set_target_fps(owe_scene_wallpaper* scene, uint32_t fps);

@@ -109,6 +109,11 @@ struct SceneWallpaperConfig {
     std::string project_property_override_json;
     uint32_t    fps { 15 };
     bool        paused { false };
+    /// The sound the wallpaper has from the start. The scene can load as soon as it is
+    /// configured, and its sounds play once mounted, before a later `PROPERTY_VOLUME` or
+    /// `PROPERTY_MUTED` is read; set afterwards, they would arrive after the music began.
+    float       volume { 1.0f };
+    bool        muted { false };
     bool        force_shader_refresh { false };
     bool        has_project_property_override { false };
 };
@@ -235,6 +240,14 @@ struct SceneWallpaperInputTestAccess {
     /// callback is told. A real presentation failure cannot be produced
     /// without breaking the GPU, so this is how the consequence is exercised.
     static void InjectFrameFailure(SceneWallpaper&);
+    /// Before `init()`: the scene's sounds play on miniaudio's null backend, so a test
+    /// opens no audio device, and what the output does can still be read.
+    static void UseNullSoundOutput(SceneWallpaper&);
+    /// How many times the scene's sound output has started.
+    static uint64_t SoundOutputStarts(SceneWallpaper&);
+    /// Whether the render thread has taken a surface, so that a configuration loads
+    /// the scene as soon as it is handled.
+    static bool SurfaceHandedOver(SceneWallpaper&);
 };
 #endif
 } // namespace wallpaper

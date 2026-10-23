@@ -142,12 +142,10 @@ final class SceneWallpaperPreviewSurface: WallpaperPreviewSurface {
             })
             if result != 0 { Unmanaged<ReadyCallback>.fromOpaque(callback).release() }
             try check(result)
-            try check(owe_scene_wallpaper_set_audio_muted(renderer, muted))
-            try check(owe_scene_wallpaper_set_audio_volume(renderer, request.volume))
             try check(owe_scene_wallpaper_set_property_bool(renderer, owe_property_audio_response_enabled(), false))
             try check(owe_scene_wallpaper_apply_config(renderer,
                 request.projectURL.appendingPathComponent("project.json").path, request.assetsURL.path,
-                cacheURL.path, request.fps, false, false, request.propertiesJSON))
+                cacheURL.path, request.fps, false, request.volume, muted, false, request.propertiesJSON))
             try check(owe_scene_wallpaper_set_property_bool(renderer, owe_property_media_integration_enabled(), false))
             try check(owe_scene_wallpaper_set_property_int32(renderer, owe_property_scaling_mode(), request.scalingMode))
             try check(owe_scene_wallpaper_set_property_float(renderer, owe_property_scaling_factor(), Float(request.scalingFactor)))

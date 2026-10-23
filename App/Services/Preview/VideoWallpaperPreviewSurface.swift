@@ -60,7 +60,11 @@ final class VideoWallpaperPreviewSurface: WallpaperPreviewSurface {
         try Task.checkCancellation()
         guard !stopped else { throw CancellationError() }
         guard let refusal else {
-            playWithAVFoundation(url)
+            let asset = AVURLAsset(url: url)
+            let range = await NativeVideoPlayer.loopRange(of: asset)
+            try Task.checkCancellation()
+            guard !stopped else { throw CancellationError() }
+            playWithAVFoundation(asset, looping: range)
             return
         }
         // AVFoundation never opens Matroska or WebM; the app's reader may.
@@ -71,13 +75,15 @@ final class VideoWallpaperPreviewSurface: WallpaperPreviewSurface {
         throw WallpaperPreviewFailure(message: refusal.reason)
     }
 
-    private func playWithAVFoundation(_ url: URL) {
+    /// Loops `range` of the clip, which the desktop player bounds the same way: its picture,
+    /// not the end of its audio.
+    private func playWithAVFoundation(_ asset: AVURLAsset, looping range: CMTimeRange) {
         let player = AVQueuePlayer()
         player.isMuted = muted
         player.volume = request.volume
         player.preventsDisplaySleepDuringVideoPlayback = false
-        let item = AVPlayerItem(asset: AVURLAsset(url: url))
-        looper = AVPlayerLooper(player: player, templateItem: item)
+        let item = AVPlayerItem(asset: asset)
+        looper = AVPlayerLooper(player: player, templateItem: item, timeRange: range)
         let layer = AVPlayerLayer(player: player)
         layer.frame = content.bounds
         layer.videoGravity = Self.gravity(for: request.scalingMode)

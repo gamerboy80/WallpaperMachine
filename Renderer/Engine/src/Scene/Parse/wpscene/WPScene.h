@@ -138,6 +138,12 @@ public:
     bool           FromJson(const nlohmann::json&);
     bool           FromJson(const nlohmann::json&, uint16_t pkg_version);
     uint16_t       pkg_version { WPSceneGeneral::kSceneVersionUnknown };
+    /// The scene file's own `version` (0 when it has none), apart from the
+    /// package's: the editor that saved the scene.
+    uint32_t       version { 0 };
+    /// From version 5 an instance colour override only re-tints a preset that
+    /// has colours of its own; older scenes multiply it by the override too.
+    static constexpr uint32_t kRetintOnlyVersion { 5 };
     WPSceneCamera  camera;
     WPSceneGeneral general;
 };

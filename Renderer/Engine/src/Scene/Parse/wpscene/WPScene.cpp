@@ -188,6 +188,9 @@ bool WPScene::FromJson(const nlohmann::json& json) {
 bool WPScene::FromJson(const nlohmann::json& json, uint16_t pkg_version_stamp) {
     if (! json.is_object()) return false;
     pkg_version = pkg_version_stamp;
+    if (const auto found = json.find("version"); found != json.end() && found->is_number_unsigned()) {
+        version = found->get<uint32_t>();
+    }
     // A block that is missing or is not an object leaves its defaults; the
     // general block is read whether or not the camera block is there.
     if (const auto found = json.find("camera"); found != json.end() && found->is_object()) {

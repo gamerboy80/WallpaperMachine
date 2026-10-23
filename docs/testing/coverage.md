@@ -759,6 +759,10 @@ need an authorized runtime check
 - `NativeVideoAdmissionTests` — a clip is admitted at every rate it was written at
   (including 120 fps) and as a variable-rate clip, since it plays at its own rate; refusal
   of corrupt, missing, audio-only and unplayable content.
+- `NativeVideoLoopRangeTests` — one pass of the loop is the video track's range: a clip
+  whose audio runs past its picture loops with the picture, a silent clip loops all of it,
+  and a clip with no readable picture loops the whole item. `NativeVideoPlayerMediaTests`
+  (opt-in) check that every copy the looper queues stops at the end of the picture.
 - `VideoFormatSupportTests` — the container told from the first bytes (the extension is not
   trusted over them; a file whose bytes show none is named by its extension), codec names, and
   the rule: a playable clip with a video track is supported, AV1 is refused without hardware

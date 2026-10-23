@@ -2077,7 +2077,7 @@ struct ParticleScene {
 
     ParticleScene(std::map<std::string, std::string> particle_files, const std::string& objects,
                   const std::string& general = R"("orthogonalprojection":{"width":640,"height":360})",
-                  ProjectProperties initial_properties = {}) {
+                  ProjectProperties initial_properties = {}, int version = -1) {
         properties = std::move(initial_properties);
         std::map<std::string, std::string> files {
             { "/mat.json",
@@ -2109,7 +2109,8 @@ struct ParticleScene {
             "clearcolor":[0,0,0], "cameraparallax":false, "cameraparallaxamount":0,
             "cameraparallaxdelay":0, "cameraparallaxmouseinfluence":0, )") +
                                           general + R"(},
-          "objects": )" + objects + "}",
+          "objects": )" + objects +
+                                          (version < 0 ? "" : R"(, "version": )" + std::to_string(version)) + "}",
                                       vfs,
                                       sound_manager);
     }
@@ -2953,6 +2954,39 @@ TEST(InstanceOverride, TheSizeOverrideScalesTheBirthSizeAndEachSizeRampUnlessThe
     EXPECT_NEAR(size_of_first(""), 270.0f, 1.0e-2f);
     EXPECT_NEAR(size_of_first(R"(,"flags":128)"), 10.0f, 1.0e-3f);
     EXPECT_NEAR(size_of_first(R"(,"flags":16)"), 270.0f, 1.0e-2f) << "the speed flag leaves the size alone";
+}
+
+TEST(InstanceOverride, FromSceneVersionFiveARetintedPresetIsNotTintedByTheOverrideAgain) {
+    // A grey preset under a dark teal override, as Wallpaper Engine 2.8 draws it
+    // (probe scenes captured in the VM): a scene saved at version 4 or before
+    // re-tints the grey to the teal and multiplies by the teal once more; from
+    // version 5 the re-tint is the colour.
+    const auto colour_at = [](int version) {
+        ParticleScene scene(
+            { { "/particle.json",
+                ParticleFile(R"({"name":"sphererandom","id":1,"rate":0,"instantaneous":1,"distancemax":0})",
+                             R"("maxcount":4)",
+                             R"({"name":"lifetimerandom","min":100,"max":100},)"
+                             R"({"name":"colorrandom","min":"92 95 97","max":"92 95 97"})") } },
+            OneParticleObject(R"("instanceoverride":{"id":1,"colorn":"0.2 0.4 0.6"})"),
+            R"("orthogonalprojection":{"width":640,"height":360})", {}, version);
+        scene.Step();
+        const auto live = LiveParticles(*scene.Sub().Instances()[0]);
+        EXPECT_EQ(live.size(), 1u);
+        return live.empty() ? linalg::Vector3f::Zero().eval() : live.front().color;
+    };
+    const linalg::Vector3f before = colour_at(4);
+    EXPECT_NEAR(before.x(), 0.04f, 1.0e-3f);
+    EXPECT_NEAR(before.y(), 0.16f, 1.0e-3f);
+    EXPECT_NEAR(before.z(), 0.36f, 1.0e-3f);
+    for (const int version : { 5, 6 }) {
+        const linalg::Vector3f now = colour_at(version);
+        EXPECT_NEAR(now.x(), 0.2f, 1.0e-3f) << "version " << version;
+        EXPECT_NEAR(now.y(), 0.4f, 1.0e-3f) << "version " << version;
+        EXPECT_NEAR(now.z(), 0.6f, 1.0e-3f) << "version " << version;
+    }
+    const linalg::Vector3f unversioned = colour_at(-1);
+    EXPECT_NEAR(unversioned.y(), 0.16f, 1.0e-3f) << "a scene without a version is an old one";
 }
 
 TEST(ParseLevel, TheIgnoreSizeOverrideFlagIsTheOneHundredTwentyEightBitOfTheFilesFlags) {
