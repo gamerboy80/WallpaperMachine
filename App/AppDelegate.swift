@@ -99,8 +99,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
     private var diagnostics: RuntimeDiagnosticsSession?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Hosted unit tests need the executable's types, not its desktop lifecycle.
-        // UI tests run in a separate runner, so the real app still starts normally.
+        // Hosted unit tests need these types but not the desktop lifecycle, so they get no
+        // windows, no status item and no services. The UI tests run in a separate runner process,
+        // which is why the real app starts there.
         if NSClassFromString("XCTestCase") != nil {
             NSApp.setActivationPolicy(.prohibited)
             return
@@ -119,11 +120,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
                 }
             }
         AppLog.info("startup: didFinishLaunching start")
-        BridgeEnvironment.configureVulkanICDIfNeeded()
-        AppLog.info("startup: vulkan icd configured")
-        // Automatic sun times follow the Mac's position across launches, not only after the
-        // source is picked again.
-        SolarLocationTracker.shared.start()
         do {
             try ClientPaths.prepare()
             let created = try BridgeStore()
@@ -164,6 +160,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         }
         pixivStore.restoreSession()
         workshopStore.restoreSteamWebSession()
+        // Follows the Mac for Automatic sunrise and sunset. It asks for nothing here: access is
+        // requested only from an explicit action in the panel.
+        SolarLocationTracker.shared.start()
+        AppLog.info("startup: solar location tracker started")
         // A crash during a download leaves its staging behind, holding the whole downloaded item.
         let stagingRoot = ClientPaths.supportURL
         let pixivStagingRoot = PixivWallpaperPackager.stagingRoot(forLibrary: ClientPaths.libraryURL)
@@ -187,7 +187,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         if let store {
             workshopStore.startDownloadLifecycle(bridge: store)
             let lockScreen = LockScreenConfiguration.isSupportedBySystem
-                ? LockScreenWallpaperService(bridge: store.bridge, contentRevision: { [weak store] in store?.wallpaperContentRevision ?? 0 }) : nil
+                ? LockScreenWallpaperService(
+                    bridge: store.bridge, contentRevision: { [weak store] in store?.wallpaperContentRevision ?? 0 }) : nil
             if let lockScreen {
                 store.lockScreenWallpaper = lockScreen
                 lockScreen.beforeActivation = { [weak self] in
@@ -289,9 +290,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
                 }
             }
             webHost.start()
-            // The experimental native video backend. The bridge returns nothing
-            // for it unless the user turned it on, so this host opens no window
-            // and starts no player by default.
+            // Plays every plain video. The bridge returns nothing for a library
+            // with no video wallpaper assigned, so this host opens no window and
+            // starts no player then.
             let nativeVideo = NativeVideoWallpaperHost(bridge: store.bridge, switchHold: hold)
             nativeVideoHost = nativeVideo
             nativeVideo.onStateChanged = { [weak store] state in store?.receiveHostState(state) }
@@ -793,7 +794,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         for scene in settings.sceneRenderers where !policy.suspendedDisplayIDs.contains(scene.displayId) {
             scenes[scene.displayId] = TelemetryFrameContext.Scene(
                 wallpaperID: scene.wallpaperId, kind: TelemetryReport.Kind(kinds[scene.wallpaperId]),
-                backend: scene.backend, fallback: scene.fallbackReason != nil, mode: modes[scene.displayId])
+                backend: scene.backend, mode: modes[scene.displayId])
         }
         let process = ProcessInfo.processInfo
         return TelemetryFrameContext(
@@ -1300,8 +1301,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         false
     }
 
+    /// A click on the Dock icon returns to the section the panel last showed. The delegate has
+    /// handled the reopen itself, so it answers false and AppKit adds nothing of its own.
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        // A Dock click returns to the last native section, even after releasing the page.
         showControlPanel(selection: controlPanelNavigation.selection ?? .wallpaper)
         return false
     }
@@ -1321,6 +1323,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         retryHeldUpdatePrompt()
     }
 
+    /// Closing the panel releases its controller; the stores and the navigation object outlive it,
+    /// so opening it again builds a fresh view around them and resumes where it was.
     func windowWillClose(_ notification: Notification) {
         guard let window = notification.object as? NSWindow else { return }
         if window === whatsNewWindow {
@@ -1333,8 +1337,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         guard window === controlPanelWindow else { return }
 
         controlPanelWindow = nil
-        // Closing releases the panel's controller and its observations; reopening builds a
-        // fresh view around the existing stores and navigation.
         window.contentViewController = nil
         leaveDockUnlessAWindowIsOpen()
         rebuildMenu()
@@ -1511,24 +1513,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         rebuildMenu(menu)
     }
 
-    /// Work around an AppKit/SwiftUI timing issue: when launched via
-    /// LaunchServices (Finder double-click) in `.accessory` activation
-    /// policy, a status item created in `applicationDidFinishLaunching`
-    /// may be created correctly but never rendered because the SwiftUI
-    /// Scene phase hasn't stabilized yet. Deferring by one runloop turn
-    /// gives the Scene phase time to settle. Re-asserting the activation
-    /// policy afterwards forces AppKit to re-register accessory-mode
-    /// status items with the Window Server; rebuilding the menu alone
-    /// only mutates `NSMenu` items and does not touch the status item's
-    /// backing window, so it is insufficient by itself.
+    /// An item created while Launch Services is still starting the app can stay out of the menu
+    /// bar until the activation policy is set again and the menu rebuilt once the first run-loop
+    /// turn has passed, so both happen then.
     private func synchronizeStatusItem() {
+        // On the next turn, not now: see above.
         DispatchQueue.main.async { [weak self] in
-            guard let self, self.statusItem != nil else { return }
-            // Re-assert the activation policy to force AppKit to
-            // re-register the accessory-mode status item with the
-            // Window Server after the SwiftUI Scene phase has settled.
-            self.leaveDockUnlessAWindowIsOpen()
-            self.rebuildMenu()
+            MainActor.assumeIsolated {
+                guard let self, self.statusItem != nil else { return }
+                self.leaveDockUnlessAWindowIsOpen()
+                self.rebuildMenu()
+            }
         }
     }
 
@@ -1558,7 +1553,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
     }
 
     private func installApplicationMenu() {
-        let menu = NSMenu()
+        let main = NSMenu()
+
         let applicationItem = NSMenuItem()
         let applicationMenu = NSMenu(title: "WallpaperMachine")
         let settings = menuItem("Settings…", action: #selector(openSettings))
@@ -1566,65 +1562,55 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
         applicationMenu.addItem(settings)
         applicationMenu.addItem(menuItem("Check for Updates…", action: #selector(checkForUpdates)))
         applicationMenu.addItem(.separator())
+        // Through the app's own exit handler, so the quit sequence runs.
         let quit = menuItem("Quit WallpaperMachine", action: #selector(exitApplication))
         quit.keyEquivalent = "q"
         applicationMenu.addItem(quit)
         applicationItem.submenu = applicationMenu
-        menu.addItem(applicationItem)
+        main.addItem(applicationItem)
 
-        // Command-W reaches the key window, so the panel hides exactly as its close button does.
         let fileItem = NSMenuItem()
         let fileMenu = NSMenu(title: String(localized: "File"))
-        fileMenu.addItem(
-            withTitle: String(localized: "Close"), action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
+        let close = NSMenuItem(title: String(localized: "Close"), action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
+        fileMenu.addItem(close)
         fileItem.submenu = fileMenu
-        menu.addItem(fileItem)
+        main.addItem(fileItem)
 
-        // Keep standard text editing shortcuts in search and setup fields.
+        // Standard responder actions, so the search and setup fields get their shortcuts.
         let editItem = NSMenuItem()
         let editMenu = NSMenu(title: String(localized: "Edit"))
-        let editCommands: [(String.LocalizationValue, Selector, String)] = [
-            ("Undo", Selector(("undo:")), "z"),
-            ("Redo", Selector(("redo:")), "Z"),
-            ("Cut", #selector(NSText.cut(_:)), "x"),
-            ("Copy", #selector(NSText.copy(_:)), "c"),
-            ("Paste", #selector(NSText.paste(_:)), "v"),
-            ("Select All", #selector(NSText.selectAll(_:)), "a")
-        ]
-        for (title, action, key) in editCommands {
-            editMenu.addItem(withTitle: String(localized: title), action: action, keyEquivalent: key)
-        }
+        editMenu.addItem(NSMenuItem(title: String(localized: "Undo"), action: Selector(("undo:")), keyEquivalent: "z"))
+        let redo = NSMenuItem(title: String(localized: "Redo"), action: Selector(("redo:")), keyEquivalent: "z")
+        redo.keyEquivalentModifierMask = [.command, .shift]
+        editMenu.addItem(redo)
+        editMenu.addItem(.separator())
+        editMenu.addItem(NSMenuItem(title: String(localized: "Cut"), action: #selector(NSText.cut(_:)), keyEquivalent: "x"))
+        editMenu.addItem(NSMenuItem(title: String(localized: "Copy"), action: #selector(NSText.copy(_:)), keyEquivalent: "c"))
+        editMenu.addItem(NSMenuItem(title: String(localized: "Paste"), action: #selector(NSText.paste(_:)), keyEquivalent: "v"))
+        editMenu.addItem(NSMenuItem(title: String(localized: "Select All"), action: #selector(NSText.selectAll(_:)), keyEquivalent: "a"))
         editItem.submenu = editMenu
-        menu.addItem(editItem)
-        NSApp.mainMenu = menu
+        main.addItem(editItem)
+
+        NSApp.mainMenu = main
     }
 
     private func rebuildMenu(_ menu: NSMenu? = nil) {
-        guard let menu = menu ?? statusItem?.menu else {
-            return
-        }
-
+        guard let menu = menu ?? statusItem?.menu else { return }
         menu.removeAllItems()
         statusMenuItems(for: StatusMenuModel.entries(for: statusMenuInput())).forEach(menu.addItem)
-
-        if let item = updateMenuItem() {
+        if let update = updateMenuItem() {
             menu.addItem(.separator())
-            menu.addItem(item)
+            menu.addItem(update)
         }
-
-        // A login launch leaves the panel closed, so the menu is where a held wallpaper shows.
         if let store, !store.heldWallpaperIDs.isEmpty {
             menu.addItem(.separator())
             menu.addItem(disabledMenuItem(String(localized: "A wallpaper was held back after a crash")))
         }
-
         if let error = startupError ?? lastError {
             menu.addItem(.separator())
             menu.addItem(disabledMenuItem(error.localizedDescription))
         }
-
         menu.addItem(.separator())
-        // A second Exit is refused while a quit runs, so say that it is running.
         if shutdownInProgress {
             menu.addItem(disabledMenuItem(String(localized: "Quitting…")))
         } else {
@@ -1943,71 +1929,50 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
     private func showControlPanel(selection: SidebarSelection) {
         controlPanelNavigation.selection = selection
         NSApp.setActivationPolicy(.regular)
-
-        if let controlPanelWindow {
-            ControlPanelWindow.constrainToScreen(controlPanelWindow)
-            ControlPanelWindow.bringForward(controlPanelWindow)
+        if let window = controlPanelWindow {
+            ControlPanelWindow.constrainToScreen(window)
+            ControlPanelWindow.bringForward(window)
             NSApp.activate(ignoringOtherApps: true)
             return
         }
 
-        let controller: NSHostingController<AnyView>
+        let root: AnyView
         if let store {
-            controller = NSHostingController(
-                rootView: AnyView(
-                    ControlPanelView(
-                        store: store,
-                        navigation: controlPanelNavigation,
-                        workshop: workshopStore,
-                        pixiv: pixivStore,
-                        updater: appUpdater,
-                        imports: libraryImports
-                    )
-                )
-            )
+            root = AnyView(ControlPanelView(
+                store: store, navigation: controlPanelNavigation, workshop: workshopStore,
+                pixiv: pixivStore, updater: appUpdater, imports: libraryImports))
         } else {
-            controller = NSHostingController(
-                rootView: AnyView(BridgeUnavailableView(error: startupError ?? lastError))
-            )
+            root = AnyView(BridgeUnavailableView(error: startupError ?? lastError))
         }
-
-        // AppKit owns this resizable window's bounds; content must accept its proposal
-        // instead of promoting a long label or a split pane's ideal width to a window minimum.
-        // The hosted view's `.toolbar` and `.navigationTitle` drive the window's own.
-        controller.sizingOptions = []
-        controller.sceneBridgingOptions = [.toolbars, .title]
-        let window = ControlPanelWindow.make(contentViewController: controller, delegate: self)
-        let frameName = ControlPanelWindow.frameAutosaveName
-        if !window.setFrameUsingName(frameName) { window.center() }
+        let hosting = NSHostingController(rootView: root)
+        // The window keeps its own size floor, and the hosted toolbar and title belong to it.
+        hosting.sizingOptions = []
+        hosting.sceneBridgingOptions = [.toolbars, .title]
+        let window = ControlPanelWindow.make(contentViewController: hosting, delegate: self)
+        if !window.setFrameUsingName(ControlPanelWindow.frameAutosaveName) { window.center() }
         ControlPanelWindow.constrainToScreen(window)
-        window.setFrameAutosaveName(frameName)
-
+        // After the saved frame is restored, so restoring does not overwrite it.
+        window.setFrameAutosaveName(ControlPanelWindow.frameAutosaveName)
         controlPanelWindow = window
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
 
     @objc private func togglePlayback() {
-        guard let store,
-              !shutdownInProgress,
-              !shutdownComplete,
-              playbackSnapshotCurrent,
-              !store.appSnapshot.activeWallpaperIds.isEmpty
-        else {
-            return
-        }
-
-        Task {
+        guard let store, !shutdownInProgress, !shutdownComplete, playbackSnapshotCurrent,
+              !store.appSnapshot.activeWallpaperIds.isEmpty else { return }
+        Task { [weak self] in
             do {
                 if store.appSnapshot.playbackState == .paused {
                     try await store.playAllAsync()
                 } else {
                     try await store.pauseAllAsync()
                 }
-                lastError = nil
-                playbackSnapshotCurrent = true
-                rebuildMenu()
+                self?.lastError = nil
+                self?.playbackSnapshotCurrent = true
+                self?.rebuildMenu()
             } catch {
+                guard let self else { return }
                 lastError = error
                 playbackSnapshotCurrent = false
                 rebuildMenu()
@@ -2036,6 +2001,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
                 return try await loader.validate(request)
             }, makeSurface: { request, generation in
                 if request.kind == .web { return WebWallpaperPreviewSurface(request: request, generation: generation) }
+                if request.kind == .video { return VideoWallpaperPreviewSurface(request: request) }
                 return SceneWallpaperPreviewSurface(request: request)
             })
             let controller = WallpaperPreviewWindowController(session: session, displayAspect: { [weak store] displayID in
@@ -2255,48 +2221,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWind
     }
 
     private func refreshStoreSnapshot() {
-        guard let store,
-              !shutdownInProgress,
-              !shutdownComplete
-        else {
-            return
-        }
-
-        Task {
+        guard let store, !shutdownInProgress, !shutdownComplete else { return }
+        Task { [weak self] in
             do {
                 try await store.refreshAllAsync()
-                lastError = nil
-                playbackSnapshotCurrent = true
+                self?.lastError = nil
+                self?.playbackSnapshotCurrent = true
             } catch {
-                lastError = error
-                playbackSnapshotCurrent = false
+                self?.lastError = error
+                self?.playbackSnapshotCurrent = false
             }
-            rebuildMenu()
+            self?.rebuildMenu()
         }
     }
 
     /// Whether the bridge took the refresh.
     private func refreshDisplaysFromSystemEvent() async -> Bool {
-        guard let store,
-              !shutdownInProgress,
-              !shutdownComplete
-        else {
-            return false
-        }
-
-        let refreshed: Bool
+        guard let store, !shutdownInProgress, !shutdownComplete else { return false }
+        let accepted: Bool
         do {
             try await store.refreshDisplaysAsync()
             lastError = nil
             playbackSnapshotCurrent = true
-            refreshed = true
+            accepted = true
         } catch {
             lastError = error
             playbackSnapshotCurrent = false
-            refreshed = false
+            accepted = false
         }
         rebuildMenu()
-        return refreshed
+        return accepted
     }
 
     /// The applied desktop Scenes that have consented to now-playing.
@@ -2331,11 +2285,11 @@ private struct BridgeUnavailableView: View {
     let error: Error?
 
     var body: some View {
-        ContentUnavailableView(
-            "Bridge Unavailable",
-            systemImage: "exclamationmark.triangle",
-            description: Text(error?.localizedDescription ?? String(localized: "The rendering bridge could not be started."))
-        )
+        ContentUnavailableView {
+            Label("Bridge Unavailable", systemImage: "exclamationmark.triangle")
+        } description: {
+            Text(verbatim: error?.localizedDescription ?? String(localized: "The rendering bridge could not be started."))
+        }
         .frame(minWidth: 640, minHeight: 420)
     }
 }

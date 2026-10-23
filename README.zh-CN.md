@@ -15,7 +15,7 @@
 <p align="center">
   <a href="https://github.com/WallpaperMachine/WallpaperMachine/releases/latest"><img src="https://img.shields.io/github/v/release/WallpaperMachine/WallpaperMachine?label=version&color=0a84ff" alt="最新版本"></a>
   <a href="https://github.com/WallpaperMachine/WallpaperMachine/actions/workflows/version.yml"><img src="https://img.shields.io/github/actions/workflow/status/WallpaperMachine/WallpaperMachine/version.yml?branch=main&label=build" alt="构建与发布状态"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/WallpaperMachine/WallpaperMachine?color=blue" alt="许可证：GPL-2.0"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/WallpaperMachine/WallpaperMachine?color=blue" alt="许可证：GPL-3.0"></a>
   <img src="https://img.shields.io/badge/macOS_15%2B-Apple_silicon-111111?logo=apple&logoColor=white" alt="macOS 15 或更高版本，Apple 芯片">
   <a href="https://github.com/WallpaperMachine/WallpaperMachine/stargazers"><img src="https://img.shields.io/github/stars/WallpaperMachine/WallpaperMachine" alt="GitHub 星标"></a>
 </p>
@@ -93,7 +93,7 @@
 
 ## 为什么值得信任
 
-- **全部开源。** 应用、渲染器和场景引擎都在这个仓库中，以 GPL-2.0 许可证发布。没有闭源核心，也没有付费功能：每个人用到的应用都一样。
+- **全部开源。** 应用、渲染器和场景引擎都在这个仓库中，以 GPL-3.0-only 许可证发布。没有闭源核心，也没有付费功能：每个人用到的应用都一样。
 - **公开构建。** 每个版本都由 [GitHub Actions](docs/release.md#build-buildyml) 从打了标签的提交构建并测试，然后附带 SHA-256 校验和与构建来源证明（build provenance attestation）发布。验证下载的文件确实来自本仓库的工作流：
   ```sh
   gh attestation verify WallpaperMachine-*-arm64.dmg --repo WallpaperMachine/WallpaperMachine
@@ -108,9 +108,9 @@
 | 层 | 作用 |
 | --- | --- |
 | **Swift 外壳** | AppKit 应用。控制面板是原生 SwiftUI 界面（[`App/Views/ControlPanel`](App/Views/ControlPanel)），[网页壁纸](docs/features/web-wallpapers.md)在各自的 web view 中运行。 |
-| **Rust 核心** | 内置的渲染器（[`upstream/renderer`](upstream/renderer)）：负责显示器、壁纸窗口、视频解码和音频捕获，通过 uniffi 桥接到 Swift。 |
-| **C++ 场景引擎** | Open Wallpaper Engine，静态链接进 Rust 核心，负责绘制场景壁纸。 |
-| **Metal** | 场景直接用原生 Metal 渲染，原生渲染器无法绘制的场景会回退为经由 MoltenVK 在 Metal 上运行的 Vulkan。AVFoundation 视频可在[设置 → 性能](docs/features/performance.md)中选择开启，场景渲染器也可在那里改为兼容模式。 |
+| **Rust 核心** | 渲染器（[`Renderer/`](Renderer)）：负责显示器、壁纸窗口、视频解码和音频捕获，通过 uniffi 桥接到 Swift。 |
+| **C++ 场景引擎** | 本项目的场景引擎（[`Renderer/Engine`](Renderer/Engine)），静态链接进 Rust 核心，负责绘制场景壁纸。 |
+| **Metal** | 场景直接用原生 Metal 渲染，原生渲染器无法绘制的场景不会被绘制：它保留最后一帧画面，原因显示在[设置 → 性能](docs/features/performance.md)中。视频壁纸由应用自带的播放器播放（AVFoundation，WebM 和 Matroska 文件使用自带的 WebM 播放器）。 |
 | **锁定屏幕** | 一个沙盒化的 ExtensionKit 扩展（[`Extension/`](Extension)）。 |
 
 各部分如何协作：[docs/architecture.md](docs/architecture.md)。每个文件放在哪里：[docs/repository-layout.md](docs/repository-layout.md)。
@@ -191,10 +191,9 @@ WallpaperMachine 支持场景、视频和网页渲染。兼容性因壁纸而异
 
 ## 开源与自行构建
 
-完整源代码就在这里。构建需要搭载 Apple 芯片的 Mac、Xcode 26（macOS 15.6 或更高版本）、用 `xcode-select` 选定的完整 Xcode，以及[先决条件](docs/build.md#prerequisites)中列出的 Homebrew 软件包；渲染器和场景引擎内置在[`upstream/`](upstream) 中，而不是以子模块引入。
+完整源代码就在这里。构建需要搭载 Apple 芯片的 Mac、Xcode 26（macOS 15.6 或更高版本）、用 `xcode-select` 选定的完整 Xcode，以及[先决条件](docs/build.md#prerequisites)中列出的 Homebrew 软件包；渲染器和场景引擎位于 [`Renderer/`](Renderer)，第三方代码内置在 [`ThirdParty/`](ThirdParty) 中，而不是以子模块引入。
 
 ```sh
-python3 scripts/install_ffmpeg.py                  # 本项目的 LGPL FFmpeg 构建
 python3 scripts/build.py --configuration Release   # 渲染器、绑定、Xcode 项目和应用
 ```
 
@@ -235,9 +234,9 @@ python3 scripts/build.py --configuration Release   # 渲染器、绑定、Xcode 
 
 本节为译文，如有出入，以英文 [README](README.md#license) 和 [LICENSE](LICENSE) 为准。
 
-源代码以 GNU 通用公共许可证第 2 版（仅限该版本）提供（[LICENSE](LICENSE)）。内置的渲染器采用 GPL-2.0-only，应用外壳由它衍生而来；上游代码保留其各自的版权和许可声明，记录在 [upstream/provenance.json](upstream/provenance.json) 中。无论是否为支持者，每位接收者都享有 GPL 授予的全部权利。
+源代码以 GNU 通用公共许可证第 3 版（仅限该版本）提供（[LICENSE](LICENSE)）。内置的第三方代码保留其各自的版权和许可声明，记录在 [ThirdParty/provenance.json](ThirdParty/provenance.json) 中。无论是否为支持者，每位接收者都享有 GPL 授予的全部权利。
 
-**目前还没有任何二进制文件获准分发。** Apache-2.0 组件（MoltenVK、Vulkan loader、SPIRV-Tools、部分 glslang、内置的 spirv_reflect，以及渲染器链接的若干 Rust crate，例如 codespan-reporting 和 miette）存在于每个构建的链接闭包中，与 GPLv2 不兼容。[LICENSING.md](LICENSING.md) 记录了相关政策、支持者模式、每个组件的许可证、尚未解决的障碍以及解决办法。创意工坊壁纸归其创作者所有，场景资源来自你所拥有的 Wallpaper Engine；应用两者都不附带。
+[LICENSING.md](LICENSING.md) 说明了代码的来源、每个第三方组件的许可证、支持者模式，以及在任何分发之前仍待完成的事项；本 README 不声称任何二进制文件已获准分发或已通过法律审查。构建过去所链接的 Apache-2.0 与 GPL-3.0 组件（MoltenVK、Vulkan loader、SPIRV-Tools、glslang、内置的 spirv_reflect，以及 spirv Rust crate）已于 2026-10-17 在早先的 GPL-2.0-only 政策下移除，这些组件与 GPLv3 兼容。创意工坊壁纸归其创作者所有，场景资源来自你所拥有的 Wallpaper Engine；应用两者都不附带。
 
 ## 友情链接
 

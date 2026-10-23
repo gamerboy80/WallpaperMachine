@@ -224,8 +224,8 @@ the rest opens in a popover from the ⓘ beside the title.
   lower quality instead of pausing, and the page names which one is lowering it. See
   [Performance settings](performance.md).
 - **Performance** opens with a live energy readout for the app, then quality
-  (presets, frame-rate limit, render scale, 2D scene resolution) directly beneath it. Video backend,
-  scene controls and the experimental switches stay under **Advanced**. See
+  (presets, frame-rate limit, render scale, 2D scene resolution) directly beneath it. The scene controls
+  and the experimental switches stay under **Advanced**. See
   [Performance settings](performance.md). The inspector of an installed wallpaper
   adds its measured energy grade, and on a Mac with a battery its share of a charge
   per hour, once it has one
@@ -408,9 +408,11 @@ stay visible in a footer while editing. Its texts can be selected and copied.
 
 Below the compatibility note, an installed wallpaper that can run (not
 Application) shows **Not working? Report on GitHub**. It opens the repository's
-new-issue form in the browser with the wallpaper's title, Workshop link or id,
+bug report form in the browser with the wallpaper's title, Workshop link or id,
 type, app version and, while it is on screen, the backend drawing it (with the
-renderer's fallback reason) pre-filled. When the panel saw this wallpaper fail
+renderer's fallback reason) pre-filled. The fields the form requires (what the
+user did, what went wrong, what they expected and the diagnostics report) are
+left for the user to fill in. When the panel saw this wallpaper fail
 (its download, or the last attempt to apply it), an error notice takes the link's
 place with **Report this problem on GitHub**, whose issue also carries the error;
 an apply failure stays until an apply succeeds. An installed scene waiting for the
@@ -590,10 +592,12 @@ wallpaper again does not make it independent.
 The **Primary display** row belongs to whichever display macOS makes the main one,
 but a wallpaper belongs to its display. When another display becomes the main one
 (a wake, a lid, a new arrangement), the previous main display keeps the wallpaper
-it showed, and the new main display shows what was saved for it, nothing if its
-wallpaper was switched off. A main display the app has never configured shows the
-wallpaper the previous main display had. `config.toml` records the display the
-row last described as `primary_display`.
+it showed, also while it is disconnected, and the new main display shows what was
+saved for it: nothing if its wallpaper was switched off or the display is set to
+mirror. A main display the app has never configured shows the wallpaper the previous
+main display had. `config.toml` records the display the row last described as
+`primary_display`; an older file without it hands nothing over until that record
+exists. Neither wallpaper reloads: the scenes stay on their displays.
 
 The renderer titles displays by CoreGraphics vendor and model numbers
 (`Vendor 1552 - Model 41055 (1 - Primary)`). `DisplayTitleResolver`
@@ -715,7 +719,9 @@ folder exists; if it does not, the button does nothing.
 
 An import takes Wallpaper Engine project folders, a Steam library, a Wallpaper
 Engine folder, a project's own files, videos (`mp4`, `m4v`, `mov`, `webm`, `mkv`,
-`avi`), HTML files and pictures (`jpg`, `jpeg`, `png`, `gif`, `webp`, `heic`,
+`avi`; importing never checks the format, so a file macOS cannot play is imported and
+refused when applied, [with its format named](performance.md#video-playback)), HTML
+files and pictures (`jpg`, `jpeg`, `png`, `gif`, `webp`, `heic`,
 `heif`, `tif`, `tiff`, `bmp`, `avif`, at most 512 MB). A picture becomes a still
 `web` wallpaper with the id `image-<file name>`, packaged the way pixiv pages are
 (`StillImageWallpaper`; see [pixiv](pixiv.md#saving-a-page)): the original kept as

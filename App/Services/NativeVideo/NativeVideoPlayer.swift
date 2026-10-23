@@ -97,6 +97,7 @@ final class NativeVideoPlayer {
     /// layout rules, not the view's edges.
     private var scalingMode: BridgeScalingMode = .fill
     private var scalingFactor = 1.0
+    private var scalingPan = NativeVideoLayout.Pan.centered
     private var viewportBounds = CGRect.zero
     private var backingScale: CGFloat = 1
     /// The size the picture is shown at, rotation applied, as the playing item
@@ -183,8 +184,8 @@ final class NativeVideoPlayer {
     private func applyPlacement() {
         guard !stopped else { return }
         let placement = NativeVideoLayout.placement(
-            mode: scalingMode, factor: scalingFactor, videoSize: presentationSize,
-            viewport: viewportBounds.size, backingScale: backingScale)
+            mode: scalingMode.layoutMode, factor: scalingFactor, videoSize: presentationSize,
+            viewport: viewportBounds.size, backingScale: backingScale, pan: scalingPan)
         // Implicit animation would visibly slide the picture to its new place
         // every time the display is resized or the user changes the mode.
         CATransaction.begin()
@@ -198,7 +199,11 @@ final class NativeVideoPlayer {
             // The rectangle already has the picture's own aspect; anything but
             // a plain stretch would re-apply an aspect rule to it.
             layer.videoGravity = .resize
-            layer.frame = rect.offsetBy(dx: viewportBounds.minX, dy: viewportBounds.minY)
+            // The layout measures from the top edge and the container's layer
+            // grows upward, so the rectangle is flipped into it.
+            layer.frame = NativeVideoLayout.layerFrame(
+                rect, viewportHeight: viewportBounds.height
+            ).offsetBy(dx: viewportBounds.minX, dy: viewportBounds.minY)
         case .pending:
             break
         }
@@ -536,13 +541,17 @@ final class NativeVideoPlayer {
         onPreparationFailure?(surface.generation, detail, settled)
     }
 
-    /// The user's scaling choice for this display. Applied to the layer
+    /// The user's scaling and position choice for this display. Applied to the layer
     /// immediately and again whenever the picture's size or the display's
     /// geometry changes; a repeated identical choice does nothing.
-    func setScaling(_ mode: BridgeScalingMode, factor: Double) {
-        guard mode != scalingMode || factor != scalingFactor else { return }
+    func setScaling(
+        _ mode: BridgeScalingMode, factor: Double, pan: NativeVideoLayout.Pan = .centered
+    ) {
+        let pan = pan.normalized
+        guard mode != scalingMode || factor != scalingFactor || pan != scalingPan else { return }
         scalingMode = mode
         scalingFactor = factor
+        scalingPan = pan
         applyPlacement()
     }
 

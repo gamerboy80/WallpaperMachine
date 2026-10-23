@@ -4,8 +4,6 @@ import ImageIO
 import QuartzCore
 import UniformTypeIdentifiers
 
-/// Encodes final renderer pixels, not a screen capture or a Workshop cover.
-///
 /// JPEG rather than PNG: a full-size Retina frame encodes several times faster
 /// and is about a third of the size, and the system wallpaper is mostly seen
 /// scaled down in Mission Control or for a moment beneath a loading renderer.
@@ -16,32 +14,42 @@ enum DesktopPosterEncoder {
     /// The picture behind renderer pixels, tagged sRGB like the renderer's own layer. Nil for
     /// pixels that do not fill `width` by `height` exactly or a size beyond what is read back.
     static func image(pixels: Data, width: Int, height: Int, bgra: Bool) -> CGImage? {
-        guard width > 0, height > 0, width <= 16_384, height <= 16_384,
-              width * height <= 32 * 1024 * 1024,
-              pixels.count == width * height * 4,
-              let provider = CGDataProvider(data: pixels as CFData),
-              let space = CGColorSpace(name: CGColorSpace.sRGB) else { return nil }
-        let info = bgra
+        guard let layout = pixelLayout(pixels: pixels, width: width, height: height) else { return nil }
+        // BGRA is little-endian with the alpha slot first in the word; RGBA is big-endian with it last.
+        let info = CGBitmapInfo(rawValue: bgra
             ? CGBitmapInfo.byteOrder32Little.rawValue | CGImageAlphaInfo.noneSkipFirst.rawValue
-            : CGBitmapInfo.byteOrder32Big.rawValue | CGImageAlphaInfo.noneSkipLast.rawValue
-        return CGImage(width: width, height: height, bitsPerComponent: 8,
-                       bitsPerPixel: 32, bytesPerRow: width * 4,
-                       space: space,
-                       bitmapInfo: CGBitmapInfo(rawValue: info), provider: provider,
+            : CGBitmapInfo.byteOrder32Big.rawValue | CGImageAlphaInfo.noneSkipLast.rawValue)
+        guard let provider = CGDataProvider(data: pixels as CFData),
+              let space = CGColorSpace(name: CGColorSpace.sRGB) else { return nil }
+        return CGImage(width: layout.width, height: layout.height, bitsPerComponent: 8, bitsPerPixel: 32,
+                       bytesPerRow: layout.width * 4, space: space, bitmapInfo: info, provider: provider,
                        decode: nil, shouldInterpolate: false, intent: .defaultIntent)
     }
 
     static func jpeg(pixels: Data, width: Int, height: Int, bgra: Bool) throws -> Data {
-        guard let image = image(pixels: pixels, width: width, height: height, bgra: bgra) else {
+        guard let picture = image(pixels: pixels, width: width, height: height, bgra: bgra) else {
             throw CocoaError(.fileReadCorruptFile)
         }
         let output = NSMutableData()
-        guard let destination = CGImageDestinationCreateWithData(output, UTType.jpeg.identifier as CFString, 1, nil) else {
+        guard let destination = CGImageDestinationCreateWithData(
+            output, UTType.jpeg.identifier as CFString, 1, nil) else {
             throw CocoaError(.fileWriteUnknown)
         }
-        CGImageDestinationAddImage(destination, image, [kCGImageDestinationLossyCompressionQuality: quality] as CFDictionary)
+        CGImageDestinationAddImage(destination, picture,
+                                   [kCGImageDestinationLossyCompressionQuality: quality] as CFDictionary)
         guard CGImageDestinationFinalize(destination) else { throw CocoaError(.fileWriteUnknown) }
         return output as Data
+    }
+
+    /// Largest edge and pixel count a frame may have; beyond them a readback is not a wallpaper.
+    private static let maximumEdge = 16_384
+    private static let maximumPixels = 33_554_432
+
+    /// The checked size of a frame whose byte count equals width times height times four.
+    fileprivate static func pixelLayout(pixels: Data, width: Int, height: Int) -> (width: Int, height: Int)? {
+        guard (1...maximumEdge).contains(width), (1...maximumEdge).contains(height),
+              width * height <= maximumPixels, pixels.count == width * height * 4 else { return nil }
+        return (width, height)
     }
 }
 
@@ -62,16 +70,16 @@ struct DesktopPosterFrame: Sendable {
 
     static func rgba(_ image: CGImage) -> DesktopPosterFrame? {
         let width = image.width, height = image.height
-        guard width > 0, height > 0, width <= 16_384, height <= 16_384,
-              width * height <= 32 * 1024 * 1024,
+        guard (1...16_384).contains(width), (1...16_384).contains(height), width * height <= 33_554_432,
               let space = CGColorSpace(name: CGColorSpace.sRGB) else { return nil }
         var pixels = Data(count: width * height * 4)
         let drawn = pixels.withUnsafeMutableBytes { buffer -> Bool in
             guard let context = CGContext(
                 data: buffer.baseAddress, width: width, height: height, bitsPerComponent: 8,
                 bytesPerRow: width * 4, space: space,
-                bitmapInfo: CGBitmapInfo.byteOrder32Big.rawValue | CGImageAlphaInfo.noneSkipLast.rawValue
-            ) else { return false }
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue)
+            else { return false }
+            context.interpolationQuality = .none
             context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
             return true
         }
@@ -258,19 +266,17 @@ final class DesktopWallpaperSync {
     }
 
     func start() {
-        guard frameObserver == nil, !stopped else { return }
-        frameObserver = frameCenter.addObserver(
-            forName: DesktopPosterNotification.ready, object: nil, queue: .main
-        ) { [weak self] notification in
+        guard !stopped, frameObserver == nil else { return }
+        frameObserver = frameCenter.addObserver(forName: DesktopPosterNotification.ready, object: nil,
+                                                queue: .main) { [weak self] notification in
             MainActor.assumeIsolated { self?.receive(notification) }
         }
-        for name in [NSWorkspace.activeSpaceDidChangeNotification, NSWorkspace.didWakeNotification] {
-            guard let workspaceCenter else { break }
-            workspaceObservers.append(workspaceCenter.addObserver(
-                forName: name, object: nil, queue: .main
-            ) { [weak self] _ in
-                MainActor.assumeIsolated { self?.refreshAfterDesktopChange() }
-            })
+        if let center = workspaceCenter {
+            for name in [NSWorkspace.activeSpaceDidChangeNotification, NSWorkspace.didWakeNotification] {
+                workspaceObservers.append(center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                    MainActor.assumeIsolated { self?.refreshAfterDesktopChange() }
+                })
+            }
         }
         schedulePeriodicCaptures()
     }
@@ -591,7 +597,6 @@ final class DesktopWallpaperSync {
     }
 
     private func report(_ error: Error) {
-        // A native-poster failure must not stop live playback or show a modal.
         AppLog.error("Native desktop poster sync failed: \(error.localizedDescription)")
     }
 }

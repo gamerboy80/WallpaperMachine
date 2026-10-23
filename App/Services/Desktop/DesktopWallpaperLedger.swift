@@ -11,13 +11,15 @@ struct DesktopPicture: Equatable, Codable {
     var nativeOptions: Data? = nil
 
     static func poster(_ url: URL) -> Self {
+        // The poster already has the display's aspect ratio: fill the screen without scaling twice.
         Self(url: url, scaling: Int(NSImageScaling.scaleAxesIndependently.rawValue),
              allowClipping: false, fill: [0, 0, 0, 1])
     }
 
     var options: [NSWorkspace.DesktopImageOptionKey: Any] {
         var result: [NSWorkspace.DesktopImageOptionKey: Any] = [
-            .imageScaling: scaling, .allowClipping: allowClipping
+            .imageScaling: NSNumber(value: scaling),
+            .allowClipping: NSNumber(value: allowClipping),
         ]
         if fill.count == 4 {
             result[.fillColor] = NSColor(srgbRed: fill[0], green: fill[1], blue: fill[2], alpha: fill[3])
@@ -120,12 +122,14 @@ final class DesktopWallpaperLedger {
          confirmationWindow: Duration = DesktopWallpaperLedger.confirmationWindow,
          systemDefaultPicture: URL = DesktopWallpaperLedger.systemDefaultPictureURL) throws {
         self.folder = folder
-        self.journal = folder.appendingPathComponent(Self.journalName)
         self.workspace = workspace
         self.confirmationWindow = confirmationWindow
         self.systemDefaultPicture = systemDefaultPicture
+        journal = folder.appendingPathComponent(Self.journalName)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         if FileManager.default.fileExists(atPath: journal.path) {
+            // A journal that cannot be read must stop creation: writing posters without a way
+            // back to the originals would strand the user's wallpaper.
             entries = try JSONDecoder().decode([String: Entry].self, from: Data(contentsOf: journal))
         } else {
             entries = [:]

@@ -127,7 +127,7 @@ final class SceneWallpaperPreviewSurface: WallpaperPreviewSurface {
         do {
             try check(owe_scene_wallpaper_new(&renderer))
             try check(owe_scene_wallpaper_init(renderer))
-            try check(owe_scene_wallpaper_init_metal_vulkan(renderer,
+            try check(owe_scene_wallpaper_init_metal(renderer,
                 Unmanaged.passUnretained(layer).toOpaque(), UInt32(size.width), UInt32(size.height), 0, 0, Double(scale)))
             let callback = Unmanaged.passRetained(ReadyCallback { [weak self] in
                 guard let self, !self.stopped else { return }

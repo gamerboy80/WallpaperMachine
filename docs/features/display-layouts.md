@@ -126,8 +126,10 @@ them, and promises only this:
 - A closed lid follows the same rule: the `primary` selector means whichever display
   macOS then reports as the main one, and a wallpaper assigned to the built-in display
   waits there until that display is listed again. The new main display shows its own
-  saved wallpaper, or the built-in display's if it was never configured
-  ([main display changes](control-panel.md#target-display)).
+  saved wallpaper (nothing while that is switched off or set to mirror), or the
+  built-in display's if it was never configured
+  ([main display changes](control-panel.md#target-display)). The scenes keep running
+  through the change; only their windows move.
 - A screen AppKit lists without a display number is not drawn on by the Swift hosts,
   because there is no ID to match it to a wallpaper. It is not mistaken for a display
   that left: its coming and going refreshes the displays like any other change.
@@ -142,6 +144,10 @@ them, and promises only this:
 
 None of this has been checked against real mirror sets, AirPlay or a closed lid; the
 tests prove what the host and the refresh do with the readings they are given. The
+main-display handover is covered device-free in the Rust crates: the bridge's
+`display::main_display_handover_tests` for the configuration, and the core's
+`display::state::main_display_tests` and `engine::actor::main_display_tests` for the
+records and for a reconciled scene that keeps its handle with no load or close. The
 [hot-plug and mirroring rows](../testing/manual-smoke.md#hot-plugs-mirroring-and-the-lid)
 of the manual smoke checklist are how it gets checked.
 

@@ -8,7 +8,7 @@ enum SettingsSwitchKey: String, CaseIterable, Sendable {
   case writeDesktopPicture, refreshDesktopPicture, keepWindowsOnWallpaperClick, livePropertyEdits
   case lockScreenEnabled, screenSaverEnabled
   case wallpapersMuted, playOnlyOnActiveDisplay
-  case sceneOptimization, sceneOnDemand, contentPacing, sharedVideoDecode, sceneVideoPlaneSampling
+  case sceneOptimization, sceneOnDemand, sceneVideoPlaneSampling
 }
 
 /// What the Settings views read and send beyond the typed values: the saved state of a switch, the
@@ -32,8 +32,6 @@ extension PanelController {
       { _ = revisions.playback; return playback.playsOnlyOnActiveDisplay }()
     case .sceneOptimization: store.settingsSnapshot.sceneOptimizationEnabled
     case .sceneOnDemand: store.settingsSnapshot.sceneOnDemandEnabled
-    case .contentPacing: store.settingsSnapshot.contentPacingEnabled
-    case .sharedVideoDecode: store.settingsSnapshot.sharedVideoDecodeEnabled
     case .sceneVideoPlaneSampling: store.settingsSnapshot.sceneVideoPlaneSamplingEnabled
     }
   }
@@ -67,8 +65,6 @@ extension PanelController {
     case .playOnlyOnActiveDisplay: try await setPlaysOnlyOnActiveDisplay(on)
     case .sceneOptimization: try await setSceneOptimization(on)
     case .sceneOnDemand: try await setSceneOnDemand(on)
-    case .contentPacing: try await setContentPacing(on)
-    case .sharedVideoDecode: try await setSharedVideoDecode(on)
     case .sceneVideoPlaneSampling: try await setSceneVideoPlaneSampling(on)
     }
   }

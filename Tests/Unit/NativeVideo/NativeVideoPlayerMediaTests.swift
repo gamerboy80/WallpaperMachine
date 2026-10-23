@@ -524,6 +524,40 @@ final class NativeVideoPlayerMediaTests: XCTestCase {
         XCTAssertEqual(player.layerFrameForTest, bounds)
     }
 
+    func testThePositionMovesThePictureWithinTheRoomAroundIt() async throws {
+        let player = try await sizedPlayer(name: "layout-position")
+        _ = await wait(upTo: .seconds(3)) { player.layerIsReadyForDisplayForTest }
+        player.relayout(bounds: CGRect(x: 0, y: 0, width: 100, height: 50), backingScale: 1)
+
+        // Original size: the 64x36 picture leaves 36 points across and 14 down.
+        player.setScaling(.none, factor: 1, pan: .centered)
+        assertRect(player.layerFrameForTest, CGRect(x: 18, y: 7, width: 64, height: 36),
+            accuracy: 0, "centred")
+        player.setScaling(.none, factor: 1, pan: .init(x: 0, y: 0))
+        assertRect(player.layerFrameForTest, CGRect(x: 0, y: 14, width: 64, height: 36),
+            accuracy: 0, "top left: y grows upward in the layer, so the top edge is the last 14")
+        player.setScaling(.none, factor: 1, pan: .init(x: 1, y: 1))
+        assertRect(player.layerFrameForTest, CGRect(x: 36, y: 0, width: 64, height: 36),
+            accuracy: 0, "bottom right")
+
+        // A plain mode with a position is placed by the layout, not by gravity, which centres:
+        // Fit of 64x36 into 100x50 is 88.9x50 (rounded), with 11 points of room across.
+        player.setScaling(.match, factor: 1, pan: .init(x: 0, y: 0.5))
+        XCTAssertEqual(player.layerFrameForTest.minX, 0, accuracy: 0.01, "fit, flush left")
+        XCTAssertEqual(player.layerGravityForTest, .resize,
+            "the layer is the picture, stretched to the layout's own rectangle")
+
+        // Back to the middle: AVFoundation places the picture again.
+        player.setScaling(.match, factor: 1, pan: .centered)
+        XCTAssertEqual(player.layerFrameForTest, CGRect(x: 0, y: 0, width: 100, height: 50))
+        XCTAssertEqual(player.layerGravityForTest, .resizeAspect)
+
+        // A position that is not a position is held to the edge, or the middle.
+        player.setScaling(.none, factor: 1, pan: .init(x: .nan, y: 7))
+        assertRect(player.layerFrameForTest, CGRect(x: 18, y: 0, width: 64, height: 36),
+            accuracy: 0, "not a number is the middle, past the edge is the edge")
+    }
+
     func testAResizedOrDenserDisplayMovesThePictureAtOnce() async throws {
         let player = try await sizedPlayer(name: "resize")
         player.setScaling(.none, factor: 1)
@@ -629,7 +663,7 @@ final class NativeVideoPlayerMediaTests: XCTestCase {
         // End to end through the production entry point: admission refuses and
         // the player is never constructed for it.
         let url = try SyntheticVideoFixture.writeCorrupt(name: "corrupt-media", into: directory)
-        let refusal = await NativeVideoAdmission.evaluate(url: url, targetFps: 60)
+        let refusal = await NativeVideoAdmission.evaluate(url: url)
         XCTAssertNotNil(refusal)
         print("[media] corrupt -> \(refusal?.reason ?? "ACCEPTED")")
     }

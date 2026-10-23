@@ -23,6 +23,8 @@ live under `testing/`.
 |---|---|
 | [architecture.md](architecture.md) | Runtime architecture and module boundaries, including the SwiftUI control panel's controller, actions and window hosting |
 | [repository-layout.md](repository-layout.md) | Directory map and where new code goes |
+| [container-readers.md](container-readers.md) | `Renderer/Media`: the project's own MP4 and Matroska/WebM readers, what they parse and refuse, their limits, and how they are tested |
+| [sound-decoding.md](sound-decoding.md) | `Renderer/Sound`: how a scene's sounds are decoded, remixed, resampled and looped for the output device, which decoder serves which file, and how that is tested |
 | [localization.md](localization.md) | Language resolution, the string catalogs and the panel's live language switch, how to add or remove a language |
 
 ## Process
@@ -34,8 +36,8 @@ live under `testing/`.
 | [../CHANGELOG.md](../CHANGELOG.md) | Published versions, newest first; written by `scripts/release_notes.py` |
 | [development-tools.md](development-tools.md) | Optional diagnostic tools (Peekaboo, Instruments, `xctrace`), the safe setup check, and when a desktop run needs authorization |
 | [../AGENTS.md](../AGENTS.md) / [../CLAUDE.md](../CLAUDE.md) | Agent rules; CLAUDE.md is a symlink, not a separate policy |
-| [../LICENSING.md](../LICENSING.md) | GPL-2.0-only source policy, Supporter model (free signed download; sponsor place and priority support), Mac App Store questions, component licenses, distribution blockers |
-| [../LICENSE](../LICENSE) | GNU GPL version 2 text, the license of this repository's source |
+| [../LICENSING.md](../LICENSING.md) | GPL-3.0-only source policy, Supporter model (free signed download; sponsor place and priority support), Mac App Store questions, component licenses, distribution blockers |
+| [../LICENSE](../LICENSE) | GNU GPL version 3 text, the license of this repository's source |
 
 ## Testing
 
@@ -51,6 +53,7 @@ live under `testing/`.
 | [testing/verification-log.md](testing/verification-log.md) | Dated verification history, ten newest entries |
 | [testing/archive/](testing/archive/) | Retired verification-log entries, one file per month, written by `scripts/log_verification.py`; historical only |
 | [testing/wallpaper-corpus.md](testing/wallpaper-corpus.md) | Local regression corpus checklist |
+| [testing/wallpaper-fixes.md](testing/wallpaper-fixes.md) | Triaging and fixing a wallpaper that looks wrong: download, Wallpaper Engine frames, probe scenes, test-first fix, before/after comparison, cleanup |
 | [testing/wallpaper-engine-reference.md](testing/wallpaper-engine-reference.md) | Comparing a wallpaper with Wallpaper Engine's own frames from a Parallels Windows VM (`scripts/we_reference.py`): capture, render, compare, noise floor |
 
 ## Archive
@@ -87,8 +90,8 @@ file; pass `rg -u` to search them deliberately.
 | [features/media-integration.md](features/media-integration.md) | Now-playing metadata and covers for scene and web wallpapers: the bundled MediaRemote adapter first, AppleScript as fallback |
 | [features/lock-screen.md](features/lock-screen.md) | Experimental animated lock screen and wallpaper-as-screen-saver |
 | [features/appearance.md](features/appearance.md) | Theme, accent and tone, the window's native materials, the app icon, and brand asset generation |
-| [features/performance.md](features/performance.md) | Energy readout and per-wallpaper ratings, quality and playback settings, video backend, experimental switches, and background work only while it has a consumer |
-| [features/scene-rendering.md](features/scene-rendering.md) | Scene renderer choice (Compatibility or Native Metal preferred), scene render optimisation, skipping frames that would repeat, renderer memory and repeated-work reduction |
+| [features/performance.md](features/performance.md) | Energy readout and per-wallpaper ratings, quality and playback settings, video playback, experimental switches, and background work only while it has a consumer |
+| [features/scene-rendering.md](features/scene-rendering.md) | The scene renderer (Native Metal only, and what a scene it cannot draw does), scene render optimisation, skipping frames that would repeat, renderer memory and repeated-work reduction |
 | [features/crash-recovery.md](features/crash-recovery.md) | The load journal (a wallpaper that was being opened when the app died twice in a row is held back at launch, how strikes, the settle window and release by Apply, the panel's Try again or an update work, the banner and menu line), SIGTERM and SIGHUP as a quit, broken pipes, the one-copy-per-library lock and what a second launch does, and the limits |
 | [features/telemetry.md](features/telemetry.md) | Send performance data: what a report holds (no free text, Workshop ids only), the daily upload, 60 s frame windows and their cost, local files, deletion when turned off, and the website endpoint |
 | [features/diagnostics.md](features/diagnostics.md) | Application log format, load tagging and the line each wallpaper activation leaves, detailed logging, retention, how the log says the previous session ended, and the diagnostics report users attach to bug reports |
